@@ -1,29 +1,51 @@
-# ═══════════════════════════════════════════
-#  Stage 1: Build (Maven + JDK 21)
-# ═══════════════════════════════════════════
-FROM eclipse-temurin:21-jdk-alpine AS build
+FROM eclipse-temurin:21-jdk-jammy AS deps
 
-WORKDIR /app
+WORKDIR /build
 
-# Cache Maven dependencies trước (chỉ rebuild khi pom.xml thay đổi)
+COPY --chmod=0755 mvnw mvnw
 COPY .mvn/ .mvn/
-COPY mvnw pom.xml ./
-RUN chmod +x mvnw && ./mvnw dependency:go-offline -q
 
-# Copy source code và build
-COPY src/ src/
-RUN ./mvnw package -DskipTests -q
+RUN --mount=type=bind,source=pom.xml,target=pom.xml \
+    --mount=type=cache,target=/root/.m2 ./mvnw dependency:go-offline -DskipTests
 
-# ═══════════════════════════════════════════
-#  Stage 2: Run (JRE only — nhẹ hơn)
-# ═══════════════════════════════════════════
-FROM eclipse-temurin:21-jre-alpine
+FROM deps AS package
 
-WORKDIR /app
+WORKDIR /build
 
-# Copy JAR từ stage build
-COPY --from=build /app/target/*.jar app.jar
+COPY ./src src/
+RUN --mount=type=bind,source=pom.xml,target=pom.xml \
+    --mount=type=cache,target=/root/.m2 \
+    ./mvnw package -DskipTests && \
+    mv target/$(./mvnw help:evaluate -Dexpression=project.artifactId -q -DforceStdout)-$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout).jar target/app.jar
+
+FROM package AS extract
+
+WORKDIR /build
+
+RUN java -Djarmode=layertools -jar target/app.jar extract --destination target/extracted
+
+FROM eclipse-temurin:21-jre-jammy AS final
+
+ARG UID=10001
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home "/nonexistent" \
+    --shell "/sbin/nologin" \
+    --no-create-home \
+    --uid "${UID}" \
+    appuser
+
+# This is the command to save some private file to Container Volume, we will use it later
+# RUN mkdir -p /app/keys && chown appuser:appuser /app/keys
+# COPY key/private_key.pem /app/keys/cloudfront-private-key.pem
+# RUN chown appuser:appuser /app/keys/cloudfront-private-key.pem && chmod 600 /app/keys/cloudfront-private-key.pem
+
+COPY --from=extract build/target/extracted/dependencies/ ./
+COPY --from=extract build/target/extracted/spring-boot-loader/ ./
+COPY --from=extract build/target/extracted/snapshot-dependencies/ ./
+COPY --from=extract build/target/extracted/application/ ./
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT [ "java", "org.springframework.boot.loader.launch.JarLauncher" ]
