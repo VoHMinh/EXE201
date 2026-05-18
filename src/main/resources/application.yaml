@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
@@ -17,7 +19,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
 
   # ── Flyway DB Migration ───────────────────────
   flyway:
