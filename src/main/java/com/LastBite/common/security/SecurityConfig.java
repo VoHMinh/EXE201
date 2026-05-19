@@ -38,7 +38,8 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthConverter jwtAuthConverter;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .findAndRegisterModules();
 
     /** Public endpoints that do NOT require authentication. */
     private static final String[] PUBLIC_ENDPOINTS = {
