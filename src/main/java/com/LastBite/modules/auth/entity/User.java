@@ -61,4 +61,7 @@ public class User extends BaseEntity {
     @Column(name = "phone_verified", nullable = false)
     @Builder.Default
     private boolean phoneVerified = false;
+
+    @Column(name = "last_login_at")
+    private java.time.Instant lastLoginAt;
 }

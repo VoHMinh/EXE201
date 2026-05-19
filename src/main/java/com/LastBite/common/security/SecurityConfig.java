@@ -84,6 +84,9 @@ public class SecurityConfig {
                         // Auth endpoints — always public
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
 
+                        // Public store browsing (GET only)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/stores/**").permitAll()
+
                         // Health check
                         .requestMatchers("/actuator/health").permitAll()
 

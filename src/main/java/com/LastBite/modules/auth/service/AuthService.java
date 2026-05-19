@@ -83,6 +83,8 @@ public class AuthService {
         }
 
         log.info("User logged in: {}", user.getEmail());
+        user.setLastLoginAt(java.time.Instant.now());
+        userRepository.save(user);
         return buildAuthResponse(user);
     }
 
