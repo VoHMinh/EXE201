@@ -3,6 +3,7 @@ package com.LastBite.modules.auth.controller;
 import com.LastBite.common.response.ApiResponse;
 import com.LastBite.modules.auth.dto.request.LoginRequest;
 import com.LastBite.modules.auth.dto.request.RefreshTokenRequest;
+import com.LastBite.modules.auth.dto.request.RegisterPartnerRequest;
 import com.LastBite.modules.auth.dto.request.RegisterRequest;
 import com.LastBite.modules.auth.dto.response.AuthResponse;
 import com.LastBite.modules.auth.dto.response.UserResponse;
@@ -28,11 +29,20 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    @Operation(summary = "Đăng ký tài khoản Customer")
+    @Operation(summary = "Đăng ký tài khoản Customer (dành cho người mua)")
     public ResponseEntity<ApiResponse<AuthResponse>> register(
             @Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(authService.register(request), "Đăng ký thành công"));
+    }
+
+    @PostMapping("/register-partner")
+    @Operation(summary = "Đăng ký tài khoản Đối tác (dành cho chủ cửa hàng) — tạo tài khoản + cửa hàng cùng lúc")
+    public ResponseEntity<ApiResponse<AuthResponse>> registerPartner(
+            @Valid @RequestBody RegisterPartnerRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(authService.registerPartner(request),
+                        "Đăng ký đối tác thành công — cửa hàng đang chờ duyệt"));
     }
 
     @PostMapping("/login")

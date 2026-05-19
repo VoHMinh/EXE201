@@ -37,18 +37,11 @@ public class StoreService {
     private final UserRepository userRepository;
 
     /**
-     * Create a new store and promote user to STORE_OWNER.
+     * Internal method — called by AuthService during partner registration.
+     * Creates a store for a STORE_OWNER user that was just registered.
      */
     @Transactional
-    public StoreDetailResponse createStore(UUID ownerId, CreateStoreRequest request) {
-        // Check if user already has a store
-        if (storeRepository.existsByOwnerId(ownerId)) {
-            throw new ApiException(ErrorCode.DUPLICATE_RESOURCE, "Bạn đã có cửa hàng rồi");
-        }
-
-        User owner = userRepository.findById(ownerId)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
-
+    public Store createStoreInternal(User owner, CreateStoreRequest request) {
         // Generate unique slug from store name
         String slug = SlugUtil.toUniqueSlug(request.getName(), storeRepository::existsBySlug);
 
@@ -72,13 +65,8 @@ public class StoreService {
                 .build();
 
         store = storeRepository.save(store);
-
-        // Promote user to STORE_OWNER
-        owner.setRole(UserRole.STORE_OWNER);
-        userRepository.save(owner);
-
-        log.info("Store created: {} (slug={}) by user {}", store.getName(), store.getSlug(), ownerId);
-        return toDetailResponse(store);
+        log.info("Store created: {} (slug={}) by user {}", store.getName(), store.getSlug(), owner.getId());
+        return store;
     }
 
     /**

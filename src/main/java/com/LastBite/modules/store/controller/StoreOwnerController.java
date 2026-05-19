@@ -1,7 +1,6 @@
 package com.LastBite.modules.store.controller;
 
 import com.LastBite.common.response.ApiResponse;
-import com.LastBite.modules.store.dto.request.CreateStoreRequest;
 import com.LastBite.modules.store.dto.request.ScheduleRequest;
 import com.LastBite.modules.store.dto.request.UpdateStoreRequest;
 import com.LastBite.modules.store.dto.response.StoreDetailResponse;
@@ -10,7 +9,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,23 +18,21 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Store management endpoints — requires STORE_OWNER role.
+ * <p>
+ * Note: Store creation happens during partner registration at
+ * {@code POST /api/v1/auth/register-partner}. This controller
+ * only handles viewing and updating an existing store.
+ */
 @RestController
 @RequestMapping("/api/v1/store-owner/store")
 @RequiredArgsConstructor
-@Tag(name = "Store Owner", description = "Quản lý cửa hàng (dành cho chủ cửa hàng)")
+@PreAuthorize("hasAuthority('STORE_OWNER')")
+@Tag(name = "Store Owner", description = "Quản lý cửa hàng (dành cho chủ cửa hàng đã đăng ký)")
 public class StoreOwnerController {
 
     private final StoreService storeService;
-
-    @PostMapping
-    @Operation(summary = "Tạo cửa hàng mới (tự động chuyển role sang STORE_OWNER)")
-    public ResponseEntity<ApiResponse<StoreDetailResponse>> createStore(
-            @AuthenticationPrincipal Jwt jwt,
-            @Valid @RequestBody CreateStoreRequest request) {
-        UUID ownerId = extractUserId(jwt);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(storeService.createStore(ownerId, request), "Tạo cửa hàng thành công — chờ duyệt"));
-    }
 
     @GetMapping
     @Operation(summary = "Xem cửa hàng của tôi")
@@ -46,7 +42,6 @@ public class StoreOwnerController {
     }
 
     @PutMapping
-    @PreAuthorize("hasAuthority('STORE_OWNER')")
     @Operation(summary = "Cập nhật thông tin cửa hàng")
     public ResponseEntity<ApiResponse<StoreDetailResponse>> updateStore(
             @AuthenticationPrincipal Jwt jwt,
@@ -56,7 +51,6 @@ public class StoreOwnerController {
     }
 
     @PutMapping("/schedules")
-    @PreAuthorize("hasAuthority('STORE_OWNER')")
     @Operation(summary = "Cập nhật lịch mở/đóng cửa")
     public ResponseEntity<ApiResponse<StoreDetailResponse>> updateSchedules(
             @AuthenticationPrincipal Jwt jwt,
@@ -66,7 +60,6 @@ public class StoreOwnerController {
     }
 
     @PatchMapping("/pause")
-    @PreAuthorize("hasAuthority('STORE_OWNER')")
     @Operation(summary = "Tạm ngưng cửa hàng")
     public ResponseEntity<ApiResponse<StoreDetailResponse>> pauseStore(@AuthenticationPrincipal Jwt jwt) {
         UUID ownerId = extractUserId(jwt);
@@ -74,7 +67,6 @@ public class StoreOwnerController {
     }
 
     @PatchMapping("/activate")
-    @PreAuthorize("hasAuthority('STORE_OWNER')")
     @Operation(summary = "Mở lại cửa hàng")
     public ResponseEntity<ApiResponse<StoreDetailResponse>> activateStore(@AuthenticationPrincipal Jwt jwt) {
         UUID ownerId = extractUserId(jwt);
