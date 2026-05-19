@@ -105,9 +105,10 @@ public class StoreService {
 
         if (request.getName() != null && !request.getName().isBlank()) {
             store.setName(request.getName().trim());
-            // Regenerate slug if name changed
+            // Regenerate slug if name changed — extract currentSlug to avoid lambda capture issue
+            String currentSlug = store.getSlug();
             store.setSlug(SlugUtil.toUniqueSlug(request.getName(), slug ->
-                    !slug.equals(store.getSlug()) && storeRepository.existsBySlug(slug)));
+                    !slug.equals(currentSlug) && storeRepository.existsBySlug(slug)));
         }
         if (request.getDescription() != null) store.setDescription(request.getDescription());
         if (request.getPhone() != null) store.setPhone(request.getPhone());
