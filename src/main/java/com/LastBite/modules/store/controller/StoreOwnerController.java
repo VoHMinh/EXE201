@@ -28,7 +28,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/store-owner/store")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('STORE_OWNER')")
+@PreAuthorize("hasRole('STORE_OWNER')")
 @Tag(name = "Store Owner", description = "Quản lý cửa hàng (dành cho chủ cửa hàng đã đăng ký)")
 public class StoreOwnerController {
 
