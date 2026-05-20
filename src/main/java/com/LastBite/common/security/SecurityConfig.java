@@ -38,8 +38,10 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthConverter jwtAuthConverter;
-    private static final ObjectMapper objectMapper = new ObjectMapper()
-            .findAndRegisterModules();
+
+    private static ObjectMapper objectMapper() {
+        return new ObjectMapper().findAndRegisterModules();
+    }
 
     /** Public endpoints that do NOT require authentication. */
     private static final String[] PUBLIC_ENDPOINTS = {
@@ -103,7 +105,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint((req, res, authEx) -> {
                             res.setStatus(HttpStatus.UNAUTHORIZED.value());
                             res.setContentType("application/json;charset=UTF-8");
-                            objectMapper.writeValue(res.getOutputStream(),
+                            objectMapper().writeValue(res.getOutputStream(),
                                     ApiResponse.builder()
                                             .code(ErrorCode.UNAUTHENTICATED.getCode())
                                             .message(ErrorCode.UNAUTHENTICATED.getDefaultMessage())
@@ -114,7 +116,7 @@ public class SecurityConfig {
                         .accessDeniedHandler((req, res, denied) -> {
                             res.setStatus(HttpStatus.FORBIDDEN.value());
                             res.setContentType("application/json;charset=UTF-8");
-                            objectMapper.writeValue(res.getOutputStream(),
+                            objectMapper().writeValue(res.getOutputStream(),
                                     ApiResponse.builder()
                                             .code(ErrorCode.FORBIDDEN.getCode())
                                             .message(ErrorCode.FORBIDDEN.getDefaultMessage())
