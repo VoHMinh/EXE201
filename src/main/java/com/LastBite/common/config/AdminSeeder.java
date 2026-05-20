@@ -43,23 +43,27 @@ public class AdminSeeder implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (userRepository.existsByEmail(adminEmail)) {
-            log.info("Admin account already exists: {}", adminEmail);
-            return;
+        try {
+            if (userRepository.existsByEmail(adminEmail)) {
+                log.info("Admin account already exists: {}", adminEmail);
+                return;
+            }
+
+            User admin = User.builder()
+                    .email(adminEmail)
+                    .passwordHash(passwordEncoder.encode(adminPassword))
+                    .fullName(adminFullName)
+                    .role(UserRole.ADMIN)
+                    .status(UserStatus.ACTIVE)
+                    .authProvider(AuthProvider.LOCAL)
+                    .emailVerified(true)
+                    .phoneVerified(false)
+                    .build();
+
+            userRepository.save(admin);
+            log.info("Default admin account created: {} (role=ADMIN)", adminEmail);
+        } catch (Exception e) {
+            log.warn("Admin seeder skipped due to error (app continues normally): {}", e.getMessage());
         }
-
-        User admin = User.builder()
-                .email(adminEmail)
-                .passwordHash(passwordEncoder.encode(adminPassword))
-                .fullName(adminFullName)
-                .role(UserRole.ADMIN)
-                .status(UserStatus.ACTIVE)
-                .authProvider(AuthProvider.LOCAL)
-                .emailVerified(true)
-                .phoneVerified(false)
-                .build();
-
-        userRepository.save(admin);
-        log.info("✅ Default admin account created: {} (role=ADMIN)", adminEmail);
     }
 }
