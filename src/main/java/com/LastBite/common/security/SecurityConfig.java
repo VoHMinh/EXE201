@@ -129,6 +129,17 @@ public class SecurityConfig {
 
                 // JWT resource server
                 .oauth2ResourceServer(oauth2 -> oauth2
+                        .authenticationEntryPoint((req, res, authEx) -> {
+                            res.setStatus(HttpStatus.UNAUTHORIZED.value());
+                            res.setContentType("application/json;charset=UTF-8");
+                            objectMapper().writeValue(res.getOutputStream(),
+                                    ApiResponse.builder()
+                                            .code(ErrorCode.UNAUTHENTICATED.getCode())
+                                            .message(ErrorCode.UNAUTHENTICATED.getDefaultMessage())
+                                            .path(req.getRequestURI())
+                                            .timestamp(Instant.now())
+                                            .build());
+                        })
                         .jwt(jwt -> jwt
                                 .decoder(jwtTokenProvider)
                                 .jwtAuthenticationConverter(jwtAuthConverter)));
