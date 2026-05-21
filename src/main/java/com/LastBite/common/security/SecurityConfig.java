@@ -1,6 +1,8 @@
 package com.LastBite.common.security;
 
 import com.LastBite.common.exception.ErrorCode;
+import com.LastBite.common.response.ApiResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,18 +20,14 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 
-import java.io.IOException;
 import java.time.Instant;
 
 /**
  * Central security configuration — <b>single filter chain</b>.
  * <p>
- * Improvement over DiHouse (which had 3 chains with duplicated endpoints):
- * <ul>
- *   <li>One chain with clear public/protected separation</li>
- *   <li>Stateless sessions (no JSESSIONID cookie)</li>
- *   <li>Custom JSON responses for 401 and 403</li>
- * </ul>
+ * Uses method-parameter injection for {@link ObjectMapper} to avoid
+ * Lombok constructor conflicts (SecurityConfig loads before Jackson
+ * auto-configuration creates the ObjectMapper bean).
  */
 @Configuration
 @EnableWebSecurity
@@ -64,8 +62,14 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder(12);
     }
 
+    /**
+     * ObjectMapper is injected here as a method parameter — NOT through the
+     * constructor. This avoids the bean-not-found error caused by Lombok's
+     * {@code @RequiredArgsConstructor} trying to inject ObjectMapper before
+     * Jackson auto-configuration has created it.
+     */
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper objectMapper) throws Exception {
 
         http
                 // CORS — uses the CorsConfig bean
@@ -100,13 +104,13 @@ public class SecurityConfig {
 
                 // Custom 401 / 403 JSON responses
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(unauthorizedEntryPoint())
-                        .accessDeniedHandler(forbiddenHandler())
+                        .authenticationEntryPoint(unauthorizedEntryPoint(objectMapper))
+                        .accessDeniedHandler(forbiddenHandler(objectMapper))
                 )
 
                 // JWT resource server
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .authenticationEntryPoint(unauthorizedEntryPoint())
+                        .authenticationEntryPoint(unauthorizedEntryPoint(objectMapper))
                         .jwt(jwt -> jwt
                                 .decoder(jwtTokenProvider)
                                 .jwtAuthenticationConverter(jwtAuthConverter)));
@@ -114,54 +118,33 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // ── Error handlers (pure String, NO ObjectMapper) ──
+    // ── Error handlers ──
 
-    private static AuthenticationEntryPoint unauthorizedEntryPoint() {
+    private static AuthenticationEntryPoint unauthorizedEntryPoint(ObjectMapper objectMapper) {
         return (req, res, authEx) -> {
             res.setStatus(HttpStatus.UNAUTHORIZED.value());
             res.setContentType("application/json;charset=UTF-8");
-            writeJsonError(res.getOutputStream(),
-                    ErrorCode.UNAUTHENTICATED.getCode(),
-                    ErrorCode.UNAUTHENTICATED.getDefaultMessage(),
-                    req.getRequestURI());
+            objectMapper.writeValue(res.getOutputStream(),
+                    ApiResponse.builder()
+                            .code(ErrorCode.UNAUTHENTICATED.getCode())
+                            .message(ErrorCode.UNAUTHENTICATED.getDefaultMessage())
+                            .path(req.getRequestURI())
+                            .timestamp(Instant.now())
+                            .build());
         };
     }
 
-    private static AccessDeniedHandler forbiddenHandler() {
+    private static AccessDeniedHandler forbiddenHandler(ObjectMapper objectMapper) {
         return (req, res, denied) -> {
             res.setStatus(HttpStatus.FORBIDDEN.value());
             res.setContentType("application/json;charset=UTF-8");
-            writeJsonError(res.getOutputStream(),
-                    ErrorCode.FORBIDDEN.getCode(),
-                    ErrorCode.FORBIDDEN.getDefaultMessage(),
-                    req.getRequestURI());
+            objectMapper.writeValue(res.getOutputStream(),
+                    ApiResponse.builder()
+                            .code(ErrorCode.FORBIDDEN.getCode())
+                            .message(ErrorCode.FORBIDDEN.getDefaultMessage())
+                            .path(req.getRequestURI())
+                            .timestamp(Instant.now())
+                            .build());
         };
-    }
-
-    /**
-     * Writes a JSON error response using plain string formatting.
-     * No ObjectMapper, no Jackson, no bean injection — zero risk of startup failure.
-     */
-    private static void writeJsonError(java.io.OutputStream out, int code, String message, String path)
-            throws IOException {
-        String json = String.format(
-                "{\"code\":%d,\"message\":\"%s\",\"timestamp\":%s,\"path\":\"%s\"}",
-                code,
-                escapeJson(message),
-                Instant.now().getEpochSecond() + "." + Instant.now().getNano(),
-                escapeJson(path)
-        );
-        out.write(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        out.flush();
-    }
-
-    /** Escape special JSON characters in a string value. */
-    private static String escapeJson(String s) {
-        if (s == null) return "";
-        return s.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
     }
 }
