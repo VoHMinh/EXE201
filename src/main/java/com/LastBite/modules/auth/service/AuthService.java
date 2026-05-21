@@ -2,15 +2,20 @@ package com.LastBite.modules.auth.service;
 
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
+import com.LastBite.common.service.EmailService;
 import com.LastBite.modules.auth.dto.request.LoginRequest;
 import com.LastBite.modules.auth.dto.request.RegisterPartnerRequest;
 import com.LastBite.modules.auth.dto.request.RegisterRequest;
+import com.LastBite.modules.auth.dto.request.ResendOtpRequest;
+import com.LastBite.modules.auth.dto.request.VerifyEmailRequest;
 import com.LastBite.modules.auth.dto.response.AuthResponse;
 import com.LastBite.modules.auth.dto.response.UserResponse;
+import com.LastBite.modules.auth.entity.EmailVerificationToken;
 import com.LastBite.modules.auth.entity.User;
 import com.LastBite.modules.auth.enums.AuthProvider;
 import com.LastBite.modules.auth.enums.UserRole;
 import com.LastBite.modules.auth.enums.UserStatus;
+import com.LastBite.modules.auth.repository.EmailVerificationTokenRepository;
 import com.LastBite.modules.auth.repository.UserRepository;
 import com.LastBite.modules.store.dto.request.CreateStoreRequest;
 import com.LastBite.modules.store.service.StoreService;
@@ -20,6 +25,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
+import java.time.Instant;
 import java.util.UUID;
 
 @Slf4j
@@ -32,21 +39,29 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final PasswordEncoder passwordEncoder;
     private final StoreService storeService;
+    private final EmailVerificationTokenRepository emailTokenRepository;
+    private final EmailService emailService;
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final int OTP_EXPIRY_MINUTES = 10;
 
     /**
      * Register a new CUSTOMER account with email + password.
+     * <p>
+     * Does NOT return tokens — user must verify email first via OTP.
+     * Sends an OTP code to the provided email address.
      */
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
+    public void register(RegisterRequest request) {
         // Check duplicates
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmail(request.getEmail().toLowerCase().trim())) {
             throw new ApiException(ErrorCode.EMAIL_EXISTS);
         }
         if (request.getPhone() != null && userRepository.existsByPhone(request.getPhone())) {
             throw new ApiException(ErrorCode.PHONE_EXISTS);
         }
 
-        // Create user
+        // Create user (emailVerified = false)
         User user = User.builder()
                 .email(request.getEmail().toLowerCase().trim())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
@@ -60,21 +75,21 @@ public class AuthService {
                 .build();
 
         user = userRepository.save(user);
-        log.info("New user registered: {} ({})", user.getEmail(), user.getId());
+        log.info("New user registered: {} ({}) — awaiting OTP verification", user.getEmail(), user.getId());
 
-        return buildAuthResponse(user);
+        // Generate and send OTP
+        sendOtp(user);
     }
 
     /**
      * Register a new STORE_OWNER account + create the Store in one step.
      * <p>
-     * Flow: Đăng ký tài khoản đối tác → tạo user (role = STORE_OWNER) + tạo Store (PENDING).
-     * Store chỉ hiện lên app khi admin duyệt (verification = VERIFIED).
+     * Does NOT return tokens — user must verify email first via OTP.
      */
     @Transactional
-    public AuthResponse registerPartner(RegisterPartnerRequest request) {
+    public void registerPartner(RegisterPartnerRequest request) {
         // Check duplicates
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmail(request.getEmail().toLowerCase().trim())) {
             throw new ApiException(ErrorCode.EMAIL_EXISTS);
         }
         if (request.getOwnerPhone() != null && userRepository.existsByPhone(request.getOwnerPhone())) {
@@ -104,6 +119,8 @@ public class AuthService {
         storeReq.setPhone(request.getStorePhone());
         storeReq.setEmail(request.getStoreEmail());
         storeReq.setAddress(request.getStoreAddress());
+        storeReq.setDistrict(request.getStoreDistrict());
+        storeReq.setCity(request.getStoreCity());
         storeReq.setLat(request.getLat());
         storeReq.setLng(request.getLng());
         storeReq.setCoverImageUrl(request.getCoverImageUrl());
@@ -113,14 +130,71 @@ public class AuthService {
 
         storeService.createStoreInternal(user, storeReq);
 
-        log.info("New partner registered: {} ({}) with store: {}",
+        log.info("New partner registered: {} ({}) with store: {} — awaiting OTP verification",
                 user.getEmail(), user.getId(), request.getStoreName());
 
+        // Generate and send OTP
+        sendOtp(user);
+    }
+
+    /**
+     * Verify email with OTP code.
+     * <p>
+     * On success: marks user as emailVerified, returns access + refresh tokens.
+     */
+    @Transactional
+    public AuthResponse verifyEmail(VerifyEmailRequest request) {
+        User user = userRepository.findByEmail(request.getEmail().toLowerCase().trim())
+                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.isEmailVerified()) {
+            throw new ApiException(ErrorCode.EMAIL_ALREADY_VERIFIED);
+        }
+
+        EmailVerificationToken token = emailTokenRepository
+                .findLatestValidByUserId(user.getId(), Instant.now())
+                .orElseThrow(() -> new ApiException(ErrorCode.OTP_EXPIRED));
+
+        if (token.hasMaxAttempts()) {
+            throw new ApiException(ErrorCode.OTP_MAX_ATTEMPTS);
+        }
+
+        if (!token.getOtpCode().equals(request.getOtpCode())) {
+            token.setAttempts(token.getAttempts() + 1);
+            emailTokenRepository.save(token);
+            throw new ApiException(ErrorCode.OTP_INVALID);
+        }
+
+        // OTP is correct — mark verified
+        token.setVerified(true);
+        emailTokenRepository.save(token);
+
+        user.setEmailVerified(true);
+        userRepository.save(user);
+
+        log.info("Email verified for user: {}", user.getEmail());
         return buildAuthResponse(user);
     }
 
     /**
+     * Resend OTP to user's email. Deletes previous unverified tokens first.
+     */
+    @Transactional
+    public void resendOtp(ResendOtpRequest request) {
+        User user = userRepository.findByEmail(request.getEmail().toLowerCase().trim())
+                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.isEmailVerified()) {
+            throw new ApiException(ErrorCode.EMAIL_ALREADY_VERIFIED);
+        }
+
+        sendOtp(user);
+    }
+
+    /**
      * Login with email + password.
+     * <p>
+     * Rejects login if email is not verified (LOCAL users only).
      */
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail().toLowerCase().trim())
@@ -140,8 +214,13 @@ public class AuthService {
             throw new ApiException(ErrorCode.ACCOUNT_DISABLED);
         }
 
+        // Check email verification (LOCAL users must verify email)
+        if (user.getAuthProvider() == AuthProvider.LOCAL && !user.isEmailVerified()) {
+            throw new ApiException(ErrorCode.EMAIL_NOT_VERIFIED);
+        }
+
         log.info("User logged in: {}", user.getEmail());
-        user.setLastLoginAt(java.time.Instant.now());
+        user.setLastLoginAt(Instant.now());
         userRepository.save(user);
         return buildAuthResponse(user);
     }
@@ -153,6 +232,7 @@ public class AuthService {
     @Transactional
     public AuthResponse refresh(String rawRefreshToken) {
         // 1. Validate old refresh token (checks Redis first, then DB)
+        // If token was already revoked (reuse), all sessions are killed automatically
         UUID userId = refreshTokenService.validateAndGetUserId(rawRefreshToken);
 
         // 2. Revoke old token (Token Rotation)
@@ -196,6 +276,24 @@ public class AuthService {
     }
 
     // ── Private helpers ──────────────────────────────────────
+
+    private void sendOtp(User user) {
+        // Delete any previous unverified tokens
+        emailTokenRepository.deleteUnverifiedByUserId(user.getId());
+
+        // Generate 6-digit OTP
+        String otp = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
+
+        EmailVerificationToken token = EmailVerificationToken.builder()
+                .user(user)
+                .otpCode(otp)
+                .expiresAt(Instant.now().plusSeconds(OTP_EXPIRY_MINUTES * 60L))
+                .build();
+        emailTokenRepository.save(token);
+
+        // Send email asynchronously
+        emailService.sendOtpEmail(user.getEmail(), user.getFullName(), otp);
+    }
 
     private AuthResponse buildAuthResponse(User user) {
         String accessToken = jwtService.generateAccessToken(user);

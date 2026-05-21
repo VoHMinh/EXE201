@@ -39,4 +39,7 @@ public class RefreshToken extends BaseEntity {
     @Column(nullable = false)
     @Builder.Default
     private boolean revoked = false;
+
+    @Column(name = "device_info", length = 500)
+    private String deviceInfo;
 }

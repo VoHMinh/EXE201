@@ -4,16 +4,17 @@ import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
 import com.LastBite.common.util.SlugUtil;
 import com.LastBite.modules.auth.entity.User;
-import com.LastBite.modules.auth.enums.UserRole;
 import com.LastBite.modules.auth.repository.UserRepository;
 import com.LastBite.modules.store.dto.request.CreateStoreRequest;
 import com.LastBite.modules.store.dto.request.ScheduleRequest;
 import com.LastBite.modules.store.dto.request.UpdateStoreRequest;
 import com.LastBite.modules.store.dto.response.StoreDetailResponse;
 import com.LastBite.modules.store.entity.Store;
+import com.LastBite.modules.store.entity.StoreReliabilityStats;
 import com.LastBite.modules.store.entity.StoreSchedule;
 import com.LastBite.modules.store.enums.StoreStatus;
 import com.LastBite.modules.store.enums.VerificationStatus;
+import com.LastBite.modules.store.repository.StoreReliabilityStatsRepository;
 import com.LastBite.modules.store.repository.StoreRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,10 +36,12 @@ public class StoreService {
 
     private final StoreRepository storeRepository;
     private final UserRepository userRepository;
+    private final StoreReliabilityStatsRepository reliabilityStatsRepository;
 
     /**
      * Internal method — called by AuthService during partner registration.
      * Creates a store for a STORE_OWNER user that was just registered.
+     * Also initializes {@link StoreReliabilityStats} (1:1).
      */
     @Transactional
     public Store createStoreInternal(User owner, CreateStoreRequest request) {
@@ -54,6 +57,8 @@ public class StoreService {
                 .phone(request.getPhone())
                 .email(request.getEmail())
                 .address(request.getAddress().trim())
+                .district(request.getDistrict())
+                .city(request.getCity() != null ? request.getCity() : "ho-chi-minh")
                 .lat(request.getLat())
                 .lng(request.getLng())
                 .coverImageUrl(request.getCoverImageUrl())
@@ -65,6 +70,13 @@ public class StoreService {
                 .build();
 
         store = storeRepository.save(store);
+
+        // Initialize reliability stats
+        StoreReliabilityStats stats = StoreReliabilityStats.builder()
+                .store(store)
+                .build();
+        reliabilityStatsRepository.save(stats);
+
         log.info("Store created: {} (slug={}) by user {}", store.getName(), store.getSlug(), owner.getId());
         return store;
     }
@@ -102,6 +114,8 @@ public class StoreService {
         if (request.getPhone() != null) store.setPhone(request.getPhone());
         if (request.getEmail() != null) store.setEmail(request.getEmail());
         if (request.getAddress() != null) store.setAddress(request.getAddress().trim());
+        if (request.getDistrict() != null) store.setDistrict(request.getDistrict());
+        if (request.getCity() != null) store.setCity(request.getCity());
         if (request.getLat() != null) store.setLat(request.getLat());
         if (request.getLng() != null) store.setLng(request.getLng());
         if (request.getCoverImageUrl() != null) store.setCoverImageUrl(request.getCoverImageUrl());
@@ -198,6 +212,8 @@ public class StoreService {
                 .phone(store.getPhone())
                 .email(store.getEmail())
                 .address(store.getAddress())
+                .district(store.getDistrict())
+                .city(store.getCity())
                 .lat(store.getLat())
                 .lng(store.getLng())
                 .coverImageUrl(store.getCoverImageUrl())

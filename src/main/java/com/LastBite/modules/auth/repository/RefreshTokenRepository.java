@@ -13,6 +13,9 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
 
     Optional<RefreshToken> findByTokenHashAndRevokedFalse(String tokenHash);
 
+    /** Find by hash regardless of revocation status — used for reuse detection. */
+    Optional<RefreshToken> findByTokenHash(String tokenHash);
+
     @Modifying
     @Query("UPDATE RefreshToken rt SET rt.revoked = true WHERE rt.user.id = :userId AND rt.revoked = false")
     int revokeAllByUserId(UUID userId);

@@ -51,6 +51,12 @@ public class RegisterPartnerRequest {
     @NotBlank(message = "Địa chỉ cửa hàng không được để trống")
     private String storeAddress;
 
+    @Size(max = 100)
+    private String storeDistrict;
+
+    @Size(max = 100)
+    private String storeCity;
+
     private Double lat;
     private Double lng;
 

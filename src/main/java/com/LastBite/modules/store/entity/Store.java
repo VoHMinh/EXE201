@@ -60,6 +60,13 @@ public class Store extends BaseEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String address;
 
+    @Column(length = 100)
+    private String district;
+
+    @Column(nullable = false, length = 100)
+    @Builder.Default
+    private String city = "ho-chi-minh";
+
     private Double lat;
     private Double lng;
 

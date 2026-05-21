@@ -31,6 +31,8 @@ public class StoreDetailResponse implements Serializable {
     private String phone;
     private String email;
     private String address;
+    private String district;
+    private String city;
     private Double lat;
     private Double lng;
     private String coverImageUrl;

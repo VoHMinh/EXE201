@@ -27,6 +27,12 @@ public class CreateStoreRequest {
     @NotBlank(message = "Địa chỉ không được để trống")
     private String address;
 
+    @Size(max = 100, message = "Quận/Huyện tối đa 100 ký tự")
+    private String district;
+
+    @Size(max = 100, message = "Thành phố tối đa 100 ký tự")
+    private String city;
+
     private Double lat;
     private Double lng;
 

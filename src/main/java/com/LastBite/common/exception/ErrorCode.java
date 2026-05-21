@@ -48,11 +48,17 @@ public enum ErrorCode {
     TOKEN_EXPIRED(4012, "Token đã hết hạn", HttpStatus.UNAUTHORIZED),
     TOKEN_INVALID(4013, "Token không hợp lệ", HttpStatus.UNAUTHORIZED),
     ACCOUNT_LOCKED(4014, "Tài khoản đã bị khóa", HttpStatus.UNAUTHORIZED),
+    TOKEN_REUSE_DETECTED(4015, "Phát hiện token tái sử dụng — tất cả phiên đã bị huỷ", HttpStatus.UNAUTHORIZED),
+    OTP_EXPIRED(4016, "Mã OTP đã hết hạn — vui lòng yêu cầu mã mới", HttpStatus.UNAUTHORIZED),
+    OTP_INVALID(4017, "Mã OTP không đúng", HttpStatus.UNAUTHORIZED),
+    OTP_MAX_ATTEMPTS(4018, "Vượt quá số lần thử OTP — vui lòng yêu cầu mã mới", HttpStatus.UNAUTHORIZED),
 
     // ── 403: Authorization ───────────────────────
     FORBIDDEN(4030, "Không có quyền truy cập", HttpStatus.FORBIDDEN),
     ACCOUNT_NOT_ACTIVATED(4031, "Tài khoản chưa được kích hoạt", HttpStatus.FORBIDDEN),
     ACCOUNT_DISABLED(4032, "Tài khoản đã bị vô hiệu hóa", HttpStatus.FORBIDDEN),
+    EMAIL_ALREADY_VERIFIED(4033, "Email đã được xác minh", HttpStatus.BAD_REQUEST),
+    EMAIL_NOT_VERIFIED(4034, "Email chưa được xác minh — vui lòng xác minh email trước", HttpStatus.FORBIDDEN),
 
     // ── 404: Not Found ───────────────────────────
     RESOURCE_NOT_FOUND(4040, "Không tìm thấy tài nguyên", HttpStatus.NOT_FOUND),

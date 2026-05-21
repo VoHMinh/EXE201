@@ -60,6 +60,8 @@ public class StoreQueryService {
                 .description(store.getDescription())
                 .category(store.getCategory())
                 .address(store.getAddress())
+                .district(store.getDistrict())
+                .city(store.getCity())
                 .lat(store.getLat())
                 .lng(store.getLng())
                 .coverImageUrl(store.getCoverImageUrl())
