@@ -1,8 +1,6 @@
 package com.LastBite.common.security;
 
 import com.LastBite.common.exception.ErrorCode;
-import com.LastBite.common.response.ApiResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,8 +14,11 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 
+import java.io.IOException;
 import java.time.Instant;
 
 /**
@@ -38,10 +39,6 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthConverter jwtAuthConverter;
-
-    private static ObjectMapper objectMapper() {
-        return new ObjectMapper().findAndRegisterModules();
-    }
 
     /** Public endpoints that do NOT require authentication. */
     private static final String[] PUBLIC_ENDPOINTS = {
@@ -103,47 +100,68 @@ public class SecurityConfig {
 
                 // Custom 401 / 403 JSON responses
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((req, res, authEx) -> {
-                            res.setStatus(HttpStatus.UNAUTHORIZED.value());
-                            res.setContentType("application/json;charset=UTF-8");
-                            objectMapper().writeValue(res.getOutputStream(),
-                                    ApiResponse.builder()
-                                            .code(ErrorCode.UNAUTHENTICATED.getCode())
-                                            .message(ErrorCode.UNAUTHENTICATED.getDefaultMessage())
-                                            .path(req.getRequestURI())
-                                            .timestamp(Instant.now())
-                                            .build());
-                        })
-                        .accessDeniedHandler((req, res, denied) -> {
-                            res.setStatus(HttpStatus.FORBIDDEN.value());
-                            res.setContentType("application/json;charset=UTF-8");
-                            objectMapper().writeValue(res.getOutputStream(),
-                                    ApiResponse.builder()
-                                            .code(ErrorCode.FORBIDDEN.getCode())
-                                            .message(ErrorCode.FORBIDDEN.getDefaultMessage())
-                                            .path(req.getRequestURI())
-                                            .timestamp(Instant.now())
-                                            .build());
-                        })
+                        .authenticationEntryPoint(unauthorizedEntryPoint())
+                        .accessDeniedHandler(forbiddenHandler())
                 )
 
                 // JWT resource server
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .authenticationEntryPoint((req, res, authEx) -> {
-                            res.setStatus(HttpStatus.UNAUTHORIZED.value());
-                            res.setContentType("application/json;charset=UTF-8");
-                            objectMapper().writeValue(res.getOutputStream(),
-                                    ApiResponse.builder()
-                                            .code(ErrorCode.UNAUTHENTICATED.getCode())
-                                            .message(ErrorCode.UNAUTHENTICATED.getDefaultMessage())
-                                            .path(req.getRequestURI())
-                                            .timestamp(Instant.now())
-                                            .build());
-                        })
+                        .authenticationEntryPoint(unauthorizedEntryPoint())
                         .jwt(jwt -> jwt
                                 .decoder(jwtTokenProvider)
                                 .jwtAuthenticationConverter(jwtAuthConverter)));
 
         return http.build();
+    }
+
+    // ── Error handlers (pure String, NO ObjectMapper) ──
+
+    private static AuthenticationEntryPoint unauthorizedEntryPoint() {
+        return (req, res, authEx) -> {
+            res.setStatus(HttpStatus.UNAUTHORIZED.value());
+            res.setContentType("application/json;charset=UTF-8");
+            writeJsonError(res.getOutputStream(),
+                    ErrorCode.UNAUTHENTICATED.getCode(),
+                    ErrorCode.UNAUTHENTICATED.getDefaultMessage(),
+                    req.getRequestURI());
+        };
+    }
+
+    private static AccessDeniedHandler forbiddenHandler() {
+        return (req, res, denied) -> {
+            res.setStatus(HttpStatus.FORBIDDEN.value());
+            res.setContentType("application/json;charset=UTF-8");
+            writeJsonError(res.getOutputStream(),
+                    ErrorCode.FORBIDDEN.getCode(),
+                    ErrorCode.FORBIDDEN.getDefaultMessage(),
+                    req.getRequestURI());
+        };
+    }
+
+    /**
+     * Writes a JSON error response using plain string formatting.
+     * No ObjectMapper, no Jackson, no bean injection — zero risk of startup failure.
+     */
+    private static void writeJsonError(java.io.OutputStream out, int code, String message, String path)
+            throws IOException {
+        String json = String.format(
+                "{\"code\":%d,\"message\":\"%s\",\"timestamp\":%s,\"path\":\"%s\"}",
+                code,
+                escapeJson(message),
+                Instant.now().getEpochSecond() + "." + Instant.now().getNano(),
+                escapeJson(path)
+        );
+        out.write(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        out.flush();
+    }
+
+    /** Escape special JSON characters in a string value. */
+    private static String escapeJson(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 }
