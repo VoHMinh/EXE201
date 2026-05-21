@@ -25,9 +25,10 @@ import java.time.Instant;
 /**
  * Central security configuration — <b>single filter chain</b>.
  * <p>
- * Uses method-parameter injection for {@link ObjectMapper} to avoid
- * Lombok constructor conflicts (SecurityConfig loads before Jackson
- * auto-configuration creates the ObjectMapper bean).
+ * ObjectMapper is created as a {@code private static final} field, not injected.
+ * SecurityConfig loads before Jackson auto-configuration, so bean injection
+ * (constructor or method parameter) fails. A static final field is initialized
+ * by the JVM classloader — no Spring involvement, no Lombok involvement.
  */
 @Configuration
 @EnableWebSecurity
@@ -37,6 +38,9 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthConverter jwtAuthConverter;
+
+    /** Standalone ObjectMapper — not a Spring bean, not touched by Lombok. */
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
 
     /** Public endpoints that do NOT require authentication. */
     private static final String[] PUBLIC_ENDPOINTS = {
@@ -62,14 +66,8 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder(12);
     }
 
-    /**
-     * ObjectMapper is injected here as a method parameter — NOT through the
-     * constructor. This avoids the bean-not-found error caused by Lombok's
-     * {@code @RequiredArgsConstructor} trying to inject ObjectMapper before
-     * Jackson auto-configuration has created it.
-     */
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper objectMapper) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
                 // CORS — uses the CorsConfig bean
@@ -104,13 +102,13 @@ public class SecurityConfig {
 
                 // Custom 401 / 403 JSON responses
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(unauthorizedEntryPoint(objectMapper))
-                        .accessDeniedHandler(forbiddenHandler(objectMapper))
+                        .authenticationEntryPoint(unauthorizedEntryPoint())
+                        .accessDeniedHandler(forbiddenHandler())
                 )
 
                 // JWT resource server
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .authenticationEntryPoint(unauthorizedEntryPoint(objectMapper))
+                        .authenticationEntryPoint(unauthorizedEntryPoint())
                         .jwt(jwt -> jwt
                                 .decoder(jwtTokenProvider)
                                 .jwtAuthenticationConverter(jwtAuthConverter)));
@@ -120,11 +118,11 @@ public class SecurityConfig {
 
     // ── Error handlers ──
 
-    private static AuthenticationEntryPoint unauthorizedEntryPoint(ObjectMapper objectMapper) {
+    private static AuthenticationEntryPoint unauthorizedEntryPoint() {
         return (req, res, authEx) -> {
             res.setStatus(HttpStatus.UNAUTHORIZED.value());
             res.setContentType("application/json;charset=UTF-8");
-            objectMapper.writeValue(res.getOutputStream(),
+            OBJECT_MAPPER.writeValue(res.getOutputStream(),
                     ApiResponse.builder()
                             .code(ErrorCode.UNAUTHENTICATED.getCode())
                             .message(ErrorCode.UNAUTHENTICATED.getDefaultMessage())
@@ -134,11 +132,11 @@ public class SecurityConfig {
         };
     }
 
-    private static AccessDeniedHandler forbiddenHandler(ObjectMapper objectMapper) {
+    private static AccessDeniedHandler forbiddenHandler() {
         return (req, res, denied) -> {
             res.setStatus(HttpStatus.FORBIDDEN.value());
             res.setContentType("application/json;charset=UTF-8");
-            objectMapper.writeValue(res.getOutputStream(),
+            OBJECT_MAPPER.writeValue(res.getOutputStream(),
                     ApiResponse.builder()
                             .code(ErrorCode.FORBIDDEN.getCode())
                             .message(ErrorCode.FORBIDDEN.getDefaultMessage())
