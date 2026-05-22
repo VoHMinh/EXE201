@@ -19,19 +19,19 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Base entity for all JPA entities in the system.
+ * Entity nền tảng cho toàn bộ JPA entity trong hệ thống.
  * <p>
- * Provides:
+ * Cung cấp:
  * <ul>
  *   <li>{@code id} — UUID v7 (time-ordered, better index performance than v4)</li>
  *   <li>{@code createdAt} — immutable creation timestamp</li>
  *   <li>{@code updatedAt} — auto-updated on every modification</li>
  * </ul>
  * <p>
- * Uses {@link Instant} (UTC) instead of {@link java.time.LocalDateTime} to avoid
- * timezone bugs when deploying across regions.
+ * Dùng {@link Instant} (UTC) thay vì {@link java.time.LocalDateTime} để tránh
+ * lỗi timezone khi triển khai ở nhiều khu vực.
  * <p>
- * {@code equals/hashCode} handles Hibernate lazy-loading proxies correctly.
+ * {@code equals/hashCode} xử lý đúng proxy lazy-loading của Hibernate.
  */
 @MappedSuperclass
 @Getter

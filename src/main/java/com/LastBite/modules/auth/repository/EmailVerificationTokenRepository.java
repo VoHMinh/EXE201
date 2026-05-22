@@ -12,7 +12,7 @@ import java.util.UUID;
 public interface EmailVerificationTokenRepository extends JpaRepository<EmailVerificationToken, UUID> {
 
     /**
-     * Find the latest non-expired, non-verified OTP for a user.
+     * Tìm OTP mới nhất của người dùng, chưa hết hạn và chưa xác minh.
      */
     @Query("""
         SELECT t FROM EmailVerificationToken t
@@ -25,7 +25,7 @@ public interface EmailVerificationTokenRepository extends JpaRepository<EmailVer
     Optional<EmailVerificationToken> findLatestValidOtpByUserId(UUID userId, Instant now);
 
     /**
-     * Find a non-expired verification-link challenge by token hash.
+     * Tìm challenge link xác minh chưa hết hạn theo token hash.
      */
     @Query("""
         SELECT t FROM EmailVerificationToken t
@@ -37,14 +37,14 @@ public interface EmailVerificationTokenRepository extends JpaRepository<EmailVer
     Optional<EmailVerificationToken> findValidLinkByTokenHash(String tokenHash, Instant now);
 
     /**
-     * Invalidate all previous tokens for a user (used before issuing a new OTP).
+     * Vô hiệu hóa toàn bộ token cũ của người dùng trước khi cấp token mới.
      */
     @Modifying
     @Query("DELETE FROM EmailVerificationToken t WHERE t.user.id = :userId AND t.verified = false")
     int deleteUnverifiedByUserId(UUID userId);
 
     /**
-     * Cleanup expired tokens (scheduled job).
+     * Dọn token hết hạn bằng scheduled job.
      */
     @Modifying
     @Query("DELETE FROM EmailVerificationToken t WHERE t.expiresAt < :cutoff")

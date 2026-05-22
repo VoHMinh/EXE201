@@ -21,13 +21,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/stores")
 @RequiredArgsConstructor
-@Tag(name = "Store (Public)", description = "Public store browsing")
+@Tag(name = "Cửa hàng (Công khai)", description = "Tra cứu cửa hàng công khai")
 public class StorePublicController {
 
     private final StoreQueryService storeQueryService;
 
     @GetMapping
-    @Operation(summary = "Search active verified stores")
+    @Operation(summary = "Tìm kiếm cửa hàng đang hoạt động và đã xác minh")
     public ResponseEntity<ApiResponse<Page<StoreResponse>>> searchStores(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) StoreCategory category,
@@ -41,7 +41,7 @@ public class StorePublicController {
     }
 
     @GetMapping("/{slug}")
-    @Operation(summary = "Get public store detail by slug")
+    @Operation(summary = "Lấy chi tiết cửa hàng công khai theo slug")
     public ResponseEntity<ApiResponse<PublicStoreDetailResponse>> getStoreBySlug(@PathVariable String slug) {
         return ResponseEntity.ok(ApiResponse.ok(storeQueryService.getStoreBySlug(slug)));
     }

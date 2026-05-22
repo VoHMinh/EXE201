@@ -13,11 +13,10 @@ import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
 
 /**
- * Custom JWT decoder using HMAC-SHA512.
+ * Bộ decode JWT tùy chỉnh dùng HMAC-SHA512.
  * <p>
- * Delegates entirely to {@link NimbusJwtDecoder} which handles signature
- * verification, expiry checking, and throws the correct {@code BadJwtException}
- * that Spring Security translates into a clean 401 response.
+ * Ủy quyền cho {@link NimbusJwtDecoder} để kiểm tra chữ ký, thời hạn và ném
+ * {@code BadJwtException} phù hợp để Spring Security chuyển thành response 401.
  */
 @Slf4j
 @Component
@@ -37,7 +36,7 @@ public class JwtTokenProvider implements JwtDecoder {
                 .macAlgorithm(MacAlgorithm.HS512)
                 .build();
 
-        log.info("JWT token provider initialised (HS512)");
+        log.info("JWT token provider đã khởi tạo (HS512)");
     }
 
     @Override

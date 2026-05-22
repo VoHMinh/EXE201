@@ -23,12 +23,12 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import java.time.Instant;
 
 /**
- * Central security configuration — <b>single filter chain</b>.
+ * Cấu hình bảo mật trung tâm — <b>một filter chain duy nhất</b>.
  * <p>
- * ObjectMapper is created as a {@code private static final} field, not injected.
- * SecurityConfig loads before Jackson auto-configuration, so bean injection
- * (constructor or method parameter) fails. A static final field is initialized
- * by the JVM classloader — no Spring involvement, no Lombok involvement.
+ * ObjectMapper được tạo dưới dạng {@code private static final}, không inject.
+ * SecurityConfig tải trước auto-configuration của Jackson nên inject bean
+ * qua constructor hoặc method parameter có thể lỗi. Field static final được
+ * JVM classloader khởi tạo, không phụ thuộc Spring hoặc Lombok.
  */
 @Configuration
 @EnableWebSecurity
@@ -39,10 +39,10 @@ public class SecurityConfig {
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthConverter jwtAuthConverter;
 
-    /** Standalone ObjectMapper — not a Spring bean, not touched by Lombok. */
+    /** ObjectMapper độc lập — không phải Spring bean, không bị Lombok xử lý. */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
 
-    /** Public endpoints that do NOT require authentication. */
+    /** Endpoint công khai KHÔNG yêu cầu xác thực. */
     private static final String[] PUBLIC_ENDPOINTS = {
             "/api/v1/auth/login",
             "/api/v1/auth/register",
@@ -58,7 +58,7 @@ public class SecurityConfig {
             "/error",
     };
 
-    /** Swagger / OpenAPI endpoints. */
+    /** Endpoint Swagger / OpenAPI. */
     private static final String[] SWAGGER_ENDPOINTS = {
             "/v3/api-docs",
             "/v3/api-docs/**",
@@ -75,37 +75,37 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-                // CORS — uses the CorsConfig bean
+                // CORS — dùng bean CorsConfig
                 .cors(Customizer.withDefaults())
 
-                // CSRF disabled (stateless JWT)
+                // Tắt CSRF vì dùng JWT stateless
                 .csrf(AbstractHttpConfigurer::disable)
 
-                // Stateless sessions
+                // Session không trạng thái
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // Authorization rules
+                // Quy tắc phân quyền
                 .authorizeHttpRequests(auth -> auth
-                        // Swagger UI — always public
+                        // Swagger UI — luôn công khai
                         .requestMatchers(SWAGGER_ENDPOINTS).permitAll()
 
-                        // Auth endpoints — always public
+                        // Endpoint auth — luôn công khai
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
 
-                        // Public store browsing (GET only)
+                        // Xem cửa hàng công khai (chỉ GET)
                         .requestMatchers(HttpMethod.GET, "/api/v1/stores/**").permitAll()
 
-                        // Health check
+                        // Kiểm tra health
                         .requestMatchers("/actuator/health").permitAll()
 
                         // Preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Everything else requires authentication
+                        // Tất cả endpoint còn lại cần xác thực
                         .anyRequest().authenticated()
                 )
 
-                // Custom 401 / 403 JSON responses
+                // Response JSON tùy chỉnh cho 401 / 403
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(unauthorizedEntryPoint())
                         .accessDeniedHandler(forbiddenHandler())

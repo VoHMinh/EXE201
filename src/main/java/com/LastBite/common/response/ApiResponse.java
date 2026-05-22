@@ -10,11 +10,11 @@ import java.time.Instant;
 import java.util.Map;
 
 /**
- * Unified API response envelope.
+ * Bao response API thống nhất.
  * <p>
- * Every endpoint returns this wrapper so the front-end always knows where to
- * find the payload ({@code result}), status ({@code code / message}), and
- * validation errors ({@code errors}).
+ * Mọi endpoint trả về wrapper này để front-end luôn biết nơi lấy payload
+ * ({@code result}), trạng thái ({@code code / message}) và lỗi validation
+ * ({@code errors}).
  *
  * @param <T> the type of the response payload
  */
@@ -25,23 +25,23 @@ import java.util.Map;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiResponse<T> {
 
-    /** Application-level status code (1000 = success). */
+    /** Mã trạng thái cấp ứng dụng (1000 = thành công). */
     @Builder.Default
     private int code = 1000;
 
-    /** Human-readable status message. */
+    /** Thông báo trạng thái dễ đọc. */
     private String message;
 
-    /** The actual response payload. */
+    /** Payload thật của response. */
     private T result;
 
-    /** Field-level validation errors (field → message). */
+    /** Lỗi validation theo từng field (field → message). */
     private Map<String, String> errors;
 
-    /** Server timestamp of the response. */
+    /** Thời điểm server tạo response. */
     private Instant timestamp;
 
-    /** Request path that produced this response. */
+    /** Path request tạo ra response này. */
     private String path;
 
     // ── Convenience factory methods ────────────────

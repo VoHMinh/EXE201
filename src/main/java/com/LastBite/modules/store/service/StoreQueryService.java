@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Public store queries for customers — read-only, cached.
+ * Truy vấn cửa hàng công khai cho khách hàng — chỉ đọc, có cache.
  */
 @Service
 @RequiredArgsConstructor
@@ -26,7 +26,7 @@ public class StoreQueryService {
     private final StoreRepository storeRepository;
 
     /**
-     * Search verified stores with optional keyword & category filter (cached 5 min).
+     * Tìm cửa hàng đã xác minh với bộ lọc tùy chọn (cache 5 phút).
      */
     @Cacheable(value = "store-list",
             key = "'search:' + #keyword + ':' + #category + ':' + #city + ':' + #district + ':' + #pageable.pageNumber + ':' + #pageable.pageSize")
@@ -39,14 +39,14 @@ public class StoreQueryService {
     }
 
     /**
-     * Get store detail by slug (cached 15 min).
+     * Lấy chi tiết cửa hàng theo slug (cache 15 phút).
      */
     @Cacheable(value = "store-by-slug", key = "#slug")
     public PublicStoreDetailResponse getStoreBySlug(String slug) {
         Store store = storeRepository.findBySlug(slug)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
-        // Only show verified stores to public
+        // Chỉ hiển thị cửa hàng đã xác minh cho public
         if (store.getVerificationStatus() != VerificationStatus.VERIFIED) {
             throw new ApiException(ErrorCode.STORE_NOT_FOUND, "Cửa hàng chưa được xác minh");
         }

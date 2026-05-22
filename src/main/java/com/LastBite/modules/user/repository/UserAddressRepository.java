@@ -17,7 +17,7 @@ public interface UserAddressRepository extends JpaRepository<UserAddress, UUID> 
 
     long countByUserId(UUID userId);
 
-    /** Reset all addresses to non-default for a user (before setting new default). */
+    /** Đặt toàn bộ địa chỉ của người dùng về không mặc định trước khi chọn mặc định mới. */
     @Modifying
     @Query("UPDATE UserAddress a SET a.isDefault = false WHERE a.user.id = :userId")
     void clearDefaultByUserId(UUID userId);

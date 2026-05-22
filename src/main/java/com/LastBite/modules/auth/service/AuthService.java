@@ -53,13 +53,13 @@ public class AuthService {
     private String emailVerificationUrl;
 
     /**
-     * Register a new CUSTOMER account with email + password.
+     * Đăng ký tài khoản CUSTOMER mới bằng email + mật khẩu.
      * <p>
-     * Does NOT return tokens — user must verify email first via verification link.
+     * Không trả token ngay — người dùng cần xác minh email bằng link trước.
      */
     @Transactional
     public void register(RegisterRequest request) {
-        // Check duplicates
+        // Kiểm tra dữ liệu trùng
         if (userRepository.existsByEmail(request.getEmail().toLowerCase().trim())) {
             throw new ApiException(ErrorCode.EMAIL_EXISTS);
         }
@@ -67,7 +67,7 @@ public class AuthService {
             throw new ApiException(ErrorCode.PHONE_EXISTS);
         }
 
-        // Create user (emailVerified = false)
+        // Tạo người dùng (emailVerified = false)
         User user = User.builder()
                 .email(request.getEmail().toLowerCase().trim())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
@@ -81,19 +81,19 @@ public class AuthService {
                 .build();
 
         user = userRepository.save(user);
-        log.info("New user registered: {} ({}) — awaiting email link verification", user.getEmail(), user.getId());
+        log.info("Người dùng mới đã đăng ký: {} ({}) — đang chờ xác minh bằng link email", user.getEmail(), user.getId());
 
         sendVerificationLink(user);
     }
 
     /**
-     * Register a new STORE_OWNER account + create the Store in one step.
+     * Đăng ký tài khoản STORE_OWNER mới và tạo cửa hàng trong một bước.
      * <p>
-     * Does NOT return tokens — user must verify email first via verification link.
+     * Không trả token ngay — người dùng cần xác minh email bằng link trước.
      */
     @Transactional
     public void registerPartner(RegisterPartnerRequest request) {
-        // Check duplicates
+        // Kiểm tra dữ liệu trùng
         if (userRepository.existsByEmail(request.getEmail().toLowerCase().trim())) {
             throw new ApiException(ErrorCode.EMAIL_EXISTS);
         }
@@ -101,7 +101,7 @@ public class AuthService {
             throw new ApiException(ErrorCode.PHONE_EXISTS);
         }
 
-        // 1. Create user with STORE_OWNER role
+        // 1. Tạo người dùng với role STORE_OWNER
         User user = User.builder()
                 .email(request.getEmail().toLowerCase().trim())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
@@ -116,7 +116,7 @@ public class AuthService {
 
         user = userRepository.save(user);
 
-        // 2. Create store for this owner
+        // 2. Tạo cửa hàng cho chủ cửa hàng này
         CreateStoreRequest storeReq = new CreateStoreRequest();
         storeReq.setName(request.getStoreName());
         storeReq.setDescription(request.getStoreDescription());
@@ -135,16 +135,16 @@ public class AuthService {
 
         storeService.createStoreInternal(user, storeReq);
 
-        log.info("New partner registered: {} ({}) with store: {} — awaiting email link verification",
+        log.info("Đối tác mới đã đăng ký: {} ({}) với cửa hàng: {} — đang chờ xác minh bằng link email",
                 user.getEmail(), user.getId(), request.getStoreName());
 
         sendVerificationLink(user);
     }
 
     /**
-     * Verify email with OTP code.
+     * Xác minh email bằng mã OTP.
      * <p>
-     * On success: marks user as emailVerified, returns access + refresh tokens.
+     * Khi thành công: đánh dấu emailVerified, trả access token và cấp refresh cookie.
      */
     @Transactional
     public AuthResponse verifyEmail(VerifyEmailRequest request) {
@@ -169,22 +169,22 @@ public class AuthService {
             throw new ApiException(ErrorCode.OTP_INVALID);
         }
 
-        // OTP is correct — mark verified
+        // OTP chính xác — đánh dấu đã xác minh
         token.setVerified(true);
         emailTokenRepository.save(token);
 
         user.setEmailVerified(true);
         userRepository.save(user);
 
-        log.info("Email verified for user: {}", user.getEmail());
+        log.info("Email đã được xác minh cho người dùng: {}", user.getEmail());
         return buildAuthResponse(user);
     }
 
     /**
-     * Verify email using a one-time link token.
+     * Xác minh email bằng token link một lần.
      * <p>
-     * This is the registration verification flow. OTP remains available for
-     * separate high-risk flows where typing a short-lived code is preferred.
+     * Đây là luồng xác minh đăng ký. OTP vẫn được giữ cho các luồng rủi ro cao
+     * riêng biệt, nơi nhập mã ngắn hạn là lựa chọn phù hợp hơn.
      */
     @Transactional
     public AuthResponse verifyEmailLink(String rawToken) {
@@ -205,12 +205,12 @@ public class AuthService {
         user.setEmailVerified(true);
         userRepository.save(user);
 
-        log.info("Email verified by link for user: {}", user.getEmail());
+        log.info("Email đã được xác minh bằng link cho người dùng: {}", user.getEmail());
         return buildAuthResponse(user);
     }
 
     /**
-     * Resend OTP to user's email. Deletes previous unverified tokens first.
+     * Gửi lại OTP tới email người dùng. Xóa token chưa xác minh trước đó trước.
      */
     @Transactional
     public void resendOtp(ResendOtpRequest request) {
@@ -225,7 +225,7 @@ public class AuthService {
     }
 
     /**
-     * Resend registration verification link.
+     * Gửi lại link xác minh đăng ký.
      */
     @Transactional
     public void resendVerificationLink(ResendOtpRequest request) {
@@ -240,21 +240,21 @@ public class AuthService {
     }
 
     /**
-     * Login with email + password.
+     * Đăng nhập bằng email + mật khẩu.
      * <p>
-     * Rejects login if email is not verified (LOCAL users only).
+     * Từ chối đăng nhập nếu email chưa được xác minh (chỉ áp dụng user LOCAL).
      */
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail().toLowerCase().trim())
                 .orElseThrow(() -> new ApiException(ErrorCode.INVALID_CREDENTIALS));
 
-        // Check password (only for LOCAL auth)
+        // Kiểm tra mật khẩu (chỉ với tài khoản LOCAL)
         if (user.getPasswordHash() == null
                 || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new ApiException(ErrorCode.INVALID_CREDENTIALS);
         }
 
-        // Check account status
+        // Kiểm tra trạng thái tài khoản
         if (user.getStatus() == UserStatus.BANNED) {
             throw new ApiException(ErrorCode.ACCOUNT_LOCKED);
         }
@@ -262,31 +262,31 @@ public class AuthService {
             throw new ApiException(ErrorCode.ACCOUNT_DISABLED);
         }
 
-        // Check email verification (LOCAL users must verify email)
+        // Kiểm tra xác minh email (tài khoản LOCAL bắt buộc xác minh email)
         if (user.getAuthProvider() == AuthProvider.LOCAL && !user.isEmailVerified()) {
             throw new ApiException(ErrorCode.EMAIL_NOT_VERIFIED);
         }
 
-        log.info("User logged in: {}", user.getEmail());
+        log.info("Người dùng đã đăng nhập: {}", user.getEmail());
         user.setLastLoginAt(Instant.now());
         userRepository.save(user);
         return buildAuthResponse(user);
     }
 
     /**
-     * Refresh access token using a valid refresh token.
-     * Implements Token Rotation: old token revoked, new token issued.
+     * Làm mới access token bằng refresh token hợp lệ.
+     * Áp dụng xoay vòng token: thu hồi token cũ và cấp token mới.
      */
     @Transactional
     public AuthResponse refresh(String rawRefreshToken) {
-        // 1. Validate old refresh token (checks Redis first, then DB)
-        // If token was already revoked (reuse), all sessions are killed automatically
+        // 1. Xác thực refresh token cũ
+        // Nếu token đã bị thu hồi nhưng vẫn được dùng lại, toàn bộ phiên sẽ bị hủy tự động
         UUID userId = refreshTokenService.validateAndGetUserId(rawRefreshToken);
 
-        // 2. Revoke old token (Token Rotation)
+        // 2. Thu hồi token cũ (xoay vòng token)
         refreshTokenService.revokeToken(rawRefreshToken);
 
-        // 3. Load user and issue new tokens
+        // 3. Tải người dùng và cấp token mới
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
 
@@ -294,12 +294,12 @@ public class AuthService {
             throw new ApiException(ErrorCode.ACCOUNT_DISABLED);
         }
 
-        log.debug("Token refreshed for user: {}", user.getEmail());
+        log.debug("Token đã được làm mới cho người dùng: {}", user.getEmail());
         return buildAuthResponse(user);
     }
 
     /**
-     * Logout — revoke the specific refresh token.
+     * Đăng xuất — thu hồi refresh token cụ thể.
      */
     @Transactional
     public void logout(String rawRefreshToken) {
@@ -307,7 +307,7 @@ public class AuthService {
     }
 
     /**
-     * Logout from ALL devices — revoke all refresh tokens.
+     * Đăng xuất khỏi TẤT CẢ thiết bị — thu hồi toàn bộ refresh token.
      */
     @Transactional
     public void logoutAll(UUID userId) {
@@ -315,7 +315,7 @@ public class AuthService {
     }
 
     /**
-     * Get current user profile from JWT claims.
+     * Lấy hồ sơ người dùng hiện tại từ claim trong JWT.
      */
     public UserResponse getCurrentUser(UUID userId) {
         User user = userRepository.findById(userId)
@@ -326,10 +326,10 @@ public class AuthService {
     // ── Private helpers ──────────────────────────────────────
 
     private void sendOtp(User user) {
-        // Delete any previous unverified tokens
+        // Xóa mọi token chưa xác minh trước đó
         emailTokenRepository.deleteUnverifiedByUserId(user.getId());
 
-        // Generate 6-digit OTP
+        // Tạo OTP 6 chữ số
         String otp = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
 
         EmailVerificationToken token = EmailVerificationToken.builder()
@@ -339,7 +339,7 @@ public class AuthService {
                 .build();
         emailTokenRepository.save(token);
 
-        // Send email asynchronously
+        // Gửi email bất đồng bộ
         emailService.sendOtpEmail(user.getEmail(), user.getFullName(), otp);
     }
 

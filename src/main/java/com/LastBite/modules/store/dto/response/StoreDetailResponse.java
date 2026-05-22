@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Full store detail — includes schedules and business license info.
+ * Chi tiết đầy đủ của cửa hàng — gồm lịch mở cửa và thông tin giấy phép kinh doanh.
  */
 @Data
 @Builder

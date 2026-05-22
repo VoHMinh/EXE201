@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Store management for STORE_OWNER role.
+ * Quản lý cửa hàng cho role STORE_OWNER.
  */
 @Slf4j
 @Service
@@ -39,13 +39,13 @@ public class StoreService {
     private final StoreReliabilityStatsRepository reliabilityStatsRepository;
 
     /**
-     * Internal method — called by AuthService during partner registration.
-     * Creates a store for a STORE_OWNER user that was just registered.
-     * Also initializes {@link StoreReliabilityStats} (1:1).
+     * Hàm nội bộ — được AuthService gọi khi đăng ký đối tác.
+     * Tạo cửa hàng cho user STORE_OWNER vừa đăng ký.
+     * Đồng thời khởi tạo {@link StoreReliabilityStats} (1:1).
      */
     @Transactional
     public Store createStoreInternal(User owner, CreateStoreRequest request) {
-        // Generate unique slug from store name
+        // Tạo slug duy nhất từ tên cửa hàng
         String slug = SlugUtil.toUniqueSlug(request.getName(), storeRepository::existsBySlug);
 
         Store store = Store.builder()
@@ -71,18 +71,18 @@ public class StoreService {
 
         store = storeRepository.save(store);
 
-        // Initialize reliability stats
+        // Khởi tạo thống kê độ tin cậy
         StoreReliabilityStats stats = StoreReliabilityStats.builder()
                 .store(store)
                 .build();
         reliabilityStatsRepository.save(stats);
 
-        log.info("Store created: {} (slug={}) by user {}", store.getName(), store.getSlug(), owner.getId());
+        log.info("Đã tạo cửa hàng: {} (slug={}) bởi người dùng {}", store.getName(), store.getSlug(), owner.getId());
         return store;
     }
 
     /**
-     * Get the owner's own store (with schedules).
+     * Lấy cửa hàng của chính chủ cửa hàng (kèm lịch mở cửa).
      */
     public StoreDetailResponse getMyStore(UUID ownerId) {
         Store store = storeRepository.findByOwnerId(ownerId)
@@ -91,7 +91,7 @@ public class StoreService {
     }
 
     /**
-     * Update store info — evicts cache.
+     * Cập nhật thông tin cửa hàng — xóa cache liên quan.
      */
     @Transactional
     @Caching(evict = {
@@ -105,7 +105,7 @@ public class StoreService {
 
         if (request.getName() != null && !request.getName().isBlank()) {
             store.setName(request.getName().trim());
-            // Regenerate slug if name changed — extract currentSlug to avoid lambda capture issue
+            // Tạo lại slug nếu đổi tên — tách currentSlug để tránh lỗi lambda capture
             String currentSlug = store.getSlug();
             store.setSlug(SlugUtil.toUniqueSlug(request.getName(), slug ->
                     !slug.equals(currentSlug) && storeRepository.existsBySlug(slug)));
@@ -122,12 +122,12 @@ public class StoreService {
         if (request.getLogoUrl() != null) store.setLogoUrl(request.getLogoUrl());
 
         store = storeRepository.save(store);
-        log.info("Store updated: {} (slug={})", store.getName(), store.getSlug());
+        log.info("Đã cập nhật cửa hàng: {} (slug={})", store.getName(), store.getSlug());
         return toDetailResponse(store);
     }
 
     /**
-     * Replace all schedules for the owner's store.
+     * Thay toàn bộ lịch mở cửa của cửa hàng.
      */
     @Transactional
     @Caching(evict = {
@@ -150,12 +150,12 @@ public class StoreService {
 
         store.replaceSchedules(newSchedules);
         store = storeRepository.save(store);
-        log.info("Schedules updated for store: {}", store.getSlug());
+        log.info("Đã cập nhật lịch mở cửa cho cửa hàng: {}", store.getSlug());
         return toDetailResponse(store);
     }
 
     /**
-     * Pause store (owner temporarily stops).
+     * Tạm ngưng cửa hàng.
      */
     @Transactional
     @Caching(evict = {
@@ -168,12 +168,12 @@ public class StoreService {
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
         store.setStatus(StoreStatus.PAUSED);
         store = storeRepository.save(store);
-        log.info("Store paused: {}", store.getSlug());
+        log.info("Cửa hàng đã tạm ngưng: {}", store.getSlug());
         return toDetailResponse(store);
     }
 
     /**
-     * Activate store (resume from pause).
+     * Kích hoạt lại cửa hàng sau khi tạm ngưng.
      */
     @Transactional
     @Caching(evict = {
@@ -186,7 +186,7 @@ public class StoreService {
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
         store.setStatus(StoreStatus.ACTIVE);
         store = storeRepository.save(store);
-        log.info("Store activated: {}", store.getSlug());
+        log.info("Cửa hàng đã hoạt động lại: {}", store.getSlug());
         return toDetailResponse(store);
     }
 

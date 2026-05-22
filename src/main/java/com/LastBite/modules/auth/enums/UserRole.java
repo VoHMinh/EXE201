@@ -1,18 +1,18 @@
 package com.LastBite.modules.auth.enums;
 
 /**
- * System-wide user roles.
+ * Các role người dùng trong toàn hệ thống.
  * <p>
- * Stored as VARCHAR in the database for readability.
+ * Lưu dưới dạng VARCHAR trong database để dễ đọc.
  */
 public enum UserRole {
 
-    /** End-user who browses and purchases Surprise Bags. */
+    /** Khách hàng xem và mua Surprise Bag. */
     CUSTOMER,
 
-    /** Store owner (restaurant, bakery, supermarket) who lists Surprise Bags. */
+    /** Chủ cửa hàng đăng bán Surprise Bag. */
     STORE_OWNER,
 
-    /** LastBite operations team — full system access. */
+    /** Đội vận hành LastBite — có toàn quyền hệ thống. */
     ADMIN
 }

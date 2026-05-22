@@ -21,10 +21,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Handles JWT access token generation and refresh token creation.
+ * Xử lý việc tạo JWT access token và refresh token.
  * <p>
- * Access tokens = JWT (signed, stateless, short-lived).
- * Refresh tokens = opaque random string (hashed, stored in DB+Redis).
+ * Access token = JWT đã ký, không trạng thái, thời hạn ngắn.
+ * Refresh token = chuỗi ngẫu nhiên opaque, được hash rồi lưu trong DB + Redis.
  */
 @Slf4j
 @Service
@@ -47,15 +47,15 @@ public class JwtService {
         try {
             byte[] keyBytes = Base64.getDecoder().decode(signerKeyBase64);
             this.macSigner = new MACSigner(keyBytes);
-            log.info("JwtService initialised (HS512, access={}s, refresh={}s)",
+            log.info("JwtService đã khởi tạo (HS512, access={}s, refresh={}s)",
                     accessTokenDuration, refreshTokenDuration);
         } catch (KeyLengthException e) {
-            throw new IllegalStateException("JWT signer key too short for HS512", e);
+            throw new IllegalStateException("Khóa ký JWT quá ngắn cho HS512", e);
         }
     }
 
     /**
-     * Generate a signed JWT access token.
+     * Tạo JWT access token đã ký.
      */
     public String generateAccessToken(User user) {
         try {
@@ -78,12 +78,12 @@ public class JwtService {
 
             return signedJWT.serialize();
         } catch (JOSEException e) {
-            throw new RuntimeException("Failed to generate access token", e);
+            throw new RuntimeException("Không thể tạo access token", e);
         }
     }
 
     /**
-     * Generate a cryptographically random refresh token (opaque, not JWT).
+     * Tạo refresh token ngẫu nhiên an toàn (opaque, không phải JWT).
      */
     public String generateRefreshToken() {
         byte[] bytes = new byte[64];
@@ -92,7 +92,7 @@ public class JwtService {
     }
 
     /**
-     * SHA-256 hash of a refresh token for secure storage.
+     * Hash SHA-256 của refresh token để lưu trữ an toàn.
      */
     public String hashToken(String rawToken) {
         try {
@@ -100,7 +100,7 @@ public class JwtService {
             byte[] hash = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
             return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 not available", e);
+            throw new RuntimeException("SHA-256 không khả dụng", e);
         }
     }
 

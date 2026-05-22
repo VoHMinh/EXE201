@@ -5,10 +5,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
 /**
- * Centralized error code registry with <b>unique, non-overlapping ranges</b>.
+ * Danh mục mã lỗi tập trung với <b>các dải mã duy nhất, không chồng lấn</b>.
  * <p>
- * Improvement over DiHouse: each range is reserved for a specific domain,
- * preventing duplicate code numbers.
+ * Mỗi dải mã được dành cho một domain cụ thể để tránh trùng mã lỗi.
  *
  * <pre>
  *  1000        → Success

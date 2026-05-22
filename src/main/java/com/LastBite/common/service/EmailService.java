@@ -10,9 +10,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
 /**
- * Email sending service using Spring Boot Starter Mail (Gmail SMTP).
+ * Dịch vụ gửi email bằng Spring Boot Starter Mail (Gmail SMTP).
  * <p>
- * All sends are {@link Async} so they don't block the HTTP response.
+ * Tất cả lần gửi đều chạy bất đồng bộ bằng {@link Async} để không chặn HTTP response.
  */
 @Slf4j
 @Service
@@ -22,7 +22,7 @@ public class EmailService {
     private final JavaMailSender mailSender;
 
     /**
-     * Send an OTP verification email with a professional HTML template.
+     * Gửi email xác minh OTP bằng template HTML.
      */
     @Async
     public void sendOtpEmail(String toEmail, String fullName, String otpCode) {
@@ -35,15 +35,15 @@ public class EmailService {
             helper.setText(buildOtpHtml(fullName, otpCode), true);
 
             mailSender.send(message);
-            log.info("OTP email sent to {}", toEmail);
+            log.info("Đã gửi email OTP tới {}", toEmail);
         } catch (Exception e) {
-            log.error("Failed to send OTP email to {}: {}", toEmail, e.getMessage(), e);
-            // Don't throw — the user can resend OTP via /auth/resend-otp
+            log.error("Gửi email OTP tới {} thất bại: {}", toEmail, e.getMessage(), e);
+            // Không throw — người dùng có thể gửi lại OTP qua /auth/resend-otp
         }
     }
 
     /**
-     * Send a one-time email verification link for registration flows.
+     * Gửi link xác minh email một lần cho luồng đăng ký.
      */
     @Async
     public void sendVerificationLinkEmail(String toEmail, String fullName, String verificationLink) {
@@ -56,9 +56,9 @@ public class EmailService {
             helper.setText(buildVerificationLinkHtml(fullName, verificationLink), true);
 
             mailSender.send(message);
-            log.info("Verification link email sent to {}", toEmail);
+            log.info("Đã gửi email link xác minh tới {}", toEmail);
         } catch (Exception e) {
-            log.error("Failed to send verification link email to {}: {}", toEmail, e.getMessage(), e);
+            log.error("Gửi email link xác minh tới {} thất bại: {}", toEmail, e.getMessage(), e);
         }
     }
 

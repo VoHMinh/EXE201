@@ -23,14 +23,14 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Global exception handler — catches all exceptions and returns a uniform
- * {@link ApiResponse} envelope.
+ * Bộ xử lý exception toàn cục — bắt exception và trả về cùng một dạng
+ * {@link ApiResponse}.
  * <p>
- * Improvement over DiHouse:
+ * Điểm cải thiện:
  * <ul>
- *   <li>Single class, no redundant {@code ErrorResponse} record</li>
- *   <li>Clean switch expression for status mapping</li>
- *   <li>Scoped to all controllers (not just a single package)</li>
+ *   <li>Một class duy nhất, không cần {@code ErrorResponse} dư thừa</li>
+ *   <li>Dùng switch expression rõ ràng để map HTTP status</li>
+ *   <li>Áp dụng cho toàn bộ controller, không chỉ một package</li>
  * </ul>
  */
 @Slf4j
@@ -103,7 +103,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Object>> handleDataIntegrity(
             DataIntegrityViolationException ex, HttpServletRequest request) {
-        log.warn("DataIntegrityViolation: {}", ex.getMessage());
+        log.warn("Vi phạm ràng buộc dữ liệu: {}", ex.getMessage());
         ErrorCode ec = ErrorCode.DUPLICATE_RESOURCE;
         return ResponseEntity.status(ec.getStatus())
                 .body(error(ec.getCode(), ec.getDefaultMessage(), request.getRequestURI(), null));
@@ -113,7 +113,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleUnexpected(
             Exception ex, HttpServletRequest request) {
-        log.error("Unexpected error:", ex);
+        log.error("Lỗi không mong đợi:", ex);
         ErrorCode ec = ErrorCode.UNEXPECTED_ERROR;
         return ResponseEntity.status(ec.getStatus())
                 .body(error(ec.getCode(), ec.getDefaultMessage(), request.getRequestURI(), null));

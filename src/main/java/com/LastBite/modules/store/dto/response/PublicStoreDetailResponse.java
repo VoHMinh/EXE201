@@ -14,8 +14,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Public store detail for customers.
- * Does not expose owner/admin-only fields such as business license data.
+ * Chi tiết cửa hàng công khai cho khách hàng.
+ * Không lộ các field chỉ dành cho chủ cửa hàng/admin như giấy phép kinh doanh.
  */
 @Data
 @Builder

@@ -14,14 +14,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Converts a decoded {@link Jwt} into a Spring Security
- * {@link JwtAuthenticationToken} with extracted authorities.
+ * Chuyển {@link Jwt} đã decode thành {@link JwtAuthenticationToken}
+ * của Spring Security kèm danh sách quyền đã trích xuất.
  * <p>
- * <b>Simpler than DiHouse:</b> no Redis/session dependency.
- * Roles are read directly from the JWT {@code roles} claim.
- * When you later need session management, extend this class.
+ * Không phụ thuộc Redis/session.
+ * Role được đọc trực tiếp từ claim {@code roles} trong JWT.
+ * Khi cần quản lý session sâu hơn, mở rộng class này.
  * <p>
- * Expected JWT claims:
+ * Các claim JWT mong đợi:
  * <ul>
  *   <li>{@code sub} — user identifier (email / phone)</li>
  *   <li>{@code user_id} — UUID of the user</li>
@@ -37,23 +37,23 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
         String userId = jwt.getClaimAsString("user_id");
 
         if (userId == null) {
-            throw new JwtException("Missing required JWT claim: user_id");
+            throw new JwtException("Thiếu claim JWT bắt buộc: user_id");
         }
 
         List<GrantedAuthority> authorities = new ArrayList<>();
 
-        // Extract roles from JWT claims
+        // Trích xuất role từ claim JWT
         List<String> roles = jwt.getClaimAsStringList("roles");
         if (roles != null) {
             for (String role : roles) {
                 authorities.add(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
             }
         } else {
-            // Default role if none specified in token
+            // Role mặc định nếu token không khai báo role
             authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
         }
 
-        // Extract permissions (optional, for fine-grained access control)
+        // Trích xuất permission tùy chọn để phân quyền chi tiết hơn
         List<String> permissions = jwt.getClaimAsStringList("permissions");
         if (permissions != null) {
             for (String perm : permissions) {

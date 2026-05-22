@@ -16,7 +16,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Manages refresh tokens with Redis + DB dual-write and reuse detection.
+ * Quản lý refresh token với Redis + DB và phát hiện token bị dùng lại.
  */
 @Slf4j
 @Service
@@ -48,21 +48,21 @@ public class RefreshTokenService {
         Duration ttl = Duration.between(Instant.now(), expiresAt);
         cacheToken(tokenHash, user.getId(), ttl);
 
-        log.debug("Created refresh token for user {}", user.getEmail());
+        log.debug("Đã tạo refresh token cho người dùng {}", user.getEmail());
         return rawToken;
     }
 
     /**
-     * Validate a raw refresh token and return the associated user ID.
-     * Redis is a cache only; DB revocation/expiry is still checked so a stale
-     * Redis key cannot revive a revoked session.
+     * Xác thực refresh token thô và trả về ID người dùng tương ứng.
+     * Redis chỉ là cache; DB vẫn được kiểm tra trạng thái thu hồi/hết hạn để
+     * key Redis cũ không thể làm sống lại phiên đã bị thu hồi.
      */
     public UUID validateAndGetUserId(String rawToken) {
         String tokenHash = jwtService.hashToken(rawToken);
 
         RefreshToken dbToken = refreshTokenRepository.findByTokenHash(tokenHash)
                 .orElseThrow(() -> new ApiException(ErrorCode.TOKEN_INVALID,
-                        "Refresh token khong hop le"));
+                        "Refresh token không hợp lệ"));
 
         ensureValidToken(dbToken);
 
@@ -91,19 +91,19 @@ public class RefreshTokenService {
     public void revokeAllByUserId(UUID userId) {
         int count = refreshTokenRepository.revokeAllByUserId(userId);
         deleteCachedTokensForUser(userId);
-        log.info("Revoked {} refresh tokens for user {}", count, userId);
+        log.info("Đã thu hồi {} refresh token của người dùng {}", count, userId);
     }
 
     private void ensureValidToken(RefreshToken dbToken) {
         if (dbToken.isRevoked()) {
             UUID userId = dbToken.getUser().getId();
-            log.warn("SECURITY: Refresh token reuse detected for user {}. Revoking all sessions.", userId);
+            log.warn("BẢO MẬT: Phát hiện refresh token bị dùng lại cho người dùng {}. Đang thu hồi toàn bộ phiên.", userId);
             revokeAllByUserId(userId);
             throw new ApiException(ErrorCode.TOKEN_REUSE_DETECTED);
         }
 
         if (dbToken.getExpiresAt().isBefore(Instant.now())) {
-            throw new ApiException(ErrorCode.TOKEN_EXPIRED, "Refresh token da het han");
+            throw new ApiException(ErrorCode.TOKEN_EXPIRED, "Refresh token đã hết hạn");
         }
     }
 

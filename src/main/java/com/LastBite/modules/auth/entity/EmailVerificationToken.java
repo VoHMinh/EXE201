@@ -9,10 +9,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Stores one-time email verification challenges.
+ * Lưu challenge xác minh email một lần.
  * <p>
- * A challenge is either an OTP code or a verification-link token hash. Each
- * concrete flow uses one method only.
+ * Một challenge là mã OTP hoặc hash token của link xác minh. Mỗi luồng cụ thể
+ * chỉ dùng một phương thức.
  */
 @Entity
 @Table(name = "email_verification_tokens")

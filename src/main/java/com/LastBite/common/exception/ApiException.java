@@ -3,10 +3,10 @@ package com.LastBite.common.exception;
 import lombok.Getter;
 
 /**
- * Application-level business exception.
+ * Exception nghiệp vụ cấp ứng dụng.
  * <p>
- * Thrown anywhere in the service layer when a known error condition occurs.
- * Caught globally by {@link GlobalExceptionHandler}.
+ * Được ném trong service layer khi gặp lỗi đã biết.
+ * Được bắt toàn cục bởi {@link GlobalExceptionHandler}.
  */
 @Getter
 public class ApiException extends RuntimeException {

@@ -9,10 +9,10 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 /**
- * Core user identity.
+ * Danh tính người dùng cốt lõi.
  * <p>
- * {@code passwordHash} is nullable to support OAuth users (Google/Zalo)
- * who register without a password.
+ * {@code passwordHash} có thể null để hỗ trợ người dùng OAuth (Google/Zalo)
+ * đăng ký không cần mật khẩu.
  */
 @Entity
 @Table(name = "users")
@@ -26,7 +26,7 @@ public class User extends BaseEntity {
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
-    /** Nullable — OAuth users don't have a local password. */
+    /** Có thể null — người dùng OAuth không có mật khẩu local. */
     @Column(name = "password_hash", length = 255)
     private String passwordHash;
 

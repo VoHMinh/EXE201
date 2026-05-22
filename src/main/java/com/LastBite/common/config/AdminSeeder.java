@@ -18,13 +18,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Arrays;
 
 /**
- * Seeds a default ADMIN account on application startup if it does not exist.
+ * Tạo tài khoản ADMIN mặc định khi ứng dụng khởi động nếu chưa tồn tại.
  * <p>
- * Credentials are read from environment variables / application config so they
- * are never hard-coded in source. Falls back to sensible defaults for local dev.
+ * Thông tin đăng nhập được đọc từ biến môi trường / cấu hình ứng dụng để không
+ * hard-code trong source. Có fallback tiện dụng cho môi trường local dev.
  * <p>
- * <b>IMPORTANT:</b> Change the default password immediately in production by
- * setting {@code ADMIN_PASSWORD} env var.
+ * <b>QUAN TRỌNG:</b> Khi chạy production, bắt buộc đổi mật khẩu mặc định bằng
+ * biến môi trường {@code ADMIN_PASSWORD}.
  */
 @Slf4j
 @Component
@@ -48,12 +48,12 @@ public class AdminSeeder implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         if (isProdProfile() && "Admin@123456".equals(adminPassword)) {
-            throw new IllegalStateException("ADMIN_PASSWORD must be set in production");
+            throw new IllegalStateException("Bắt buộc cấu hình ADMIN_PASSWORD trong production");
         }
 
         try {
             if (userRepository.existsByEmail(adminEmail)) {
-                log.info("Admin account already exists: {}", adminEmail);
+                log.info("Tài khoản admin đã tồn tại: {}", adminEmail);
                 return;
             }
 
@@ -69,9 +69,9 @@ public class AdminSeeder implements ApplicationRunner {
                     .build();
 
             userRepository.save(admin);
-            log.info("Default admin account created: {} (role=ADMIN)", adminEmail);
+            log.info("Đã tạo tài khoản admin mặc định: {} (role=ADMIN)", adminEmail);
         } catch (Exception e) {
-            log.warn("Admin seeder skipped due to error (app continues normally): {}", e.getMessage());
+            log.warn("Bỏ qua tạo admin mặc định do lỗi (ứng dụng vẫn tiếp tục chạy): {}", e.getMessage());
         }
     }
 

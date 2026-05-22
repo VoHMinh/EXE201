@@ -13,7 +13,7 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
 
     Optional<RefreshToken> findByTokenHashAndRevokedFalse(String tokenHash);
 
-    /** Find by hash regardless of revocation status — used for reuse detection. */
+    /** Tìm theo hash bất kể trạng thái thu hồi — dùng để phát hiện token bị dùng lại. */
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 
     @Modifying

@@ -14,11 +14,11 @@ import java.util.UUID;
 
 public interface StoreRepository extends JpaRepository<Store, UUID> {
 
-    /** Find by owner — with schedules (prevent N+1). */
+    /** Tìm theo chủ cửa hàng — kèm lịch mở cửa để tránh N+1. */
     @EntityGraph(value = "Store.withSchedules")
     Optional<Store> findByOwnerId(UUID ownerId);
 
-    /** Find by slug — with schedules (prevent N+1). */
+    /** Tìm theo slug — kèm lịch mở cửa để tránh N+1. */
     @EntityGraph(value = "Store.withSchedules")
     Optional<Store> findBySlug(String slug);
 
@@ -26,7 +26,7 @@ public interface StoreRepository extends JpaRepository<Store, UUID> {
 
     boolean existsByOwnerId(UUID ownerId);
 
-    /** Search stores: only VERIFIED + ACTIVE, with optional filters. */
+    /** Tìm cửa hàng: chỉ VERIFIED + ACTIVE, có bộ lọc tùy chọn. */
     @Query("""
         SELECT s FROM Store s
         WHERE s.verificationStatus = :verification

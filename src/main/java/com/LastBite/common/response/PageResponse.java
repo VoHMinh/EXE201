@@ -3,7 +3,7 @@ package com.LastBite.common.response;
 import java.util.List;
 
 /**
- * Paginated response wrapper.
+ * Wrapper response phân trang.
  *
  * @param content       items on the current page
  * @param page          zero-based page index

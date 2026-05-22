@@ -1,15 +1,15 @@
 package com.LastBite.modules.store.enums;
 
 /**
- * Operational status of a store.
+ * Trạng thái vận hành của cửa hàng.
  */
 public enum StoreStatus {
-    /** Store is open and operational. */
+    /** Cửa hàng đang mở và hoạt động. */
     ACTIVE,
-    /** Temporarily paused by the owner. */
+    /** Chủ cửa hàng tạm ngưng hoạt động. */
     PAUSED,
-    /** Permanently closed by the owner. */
+    /** Chủ cửa hàng đóng vĩnh viễn. */
     CLOSED,
-    /** Suspended by admin (policy violation). */
+    /** Bị admin đình chỉ do vi phạm chính sách. */
     SUSPENDED
 }

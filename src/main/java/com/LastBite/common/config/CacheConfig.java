@@ -14,9 +14,9 @@ import java.time.Duration;
 import java.util.Map;
 
 /**
- * Redis cache configuration with per-cache TTL settings.
+ * Cấu hình Redis cache với TTL riêng cho từng cache.
  * <p>
- * Cache names:
+ * Tên cache:
  * <ul>
  *   <li>{@code user-profile} — 30 min TTL (changes infrequently)</li>
  *   <li>{@code user-addresses} — 30 min TTL</li>

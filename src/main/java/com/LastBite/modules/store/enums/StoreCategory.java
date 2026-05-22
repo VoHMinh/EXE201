@@ -1,7 +1,7 @@
 package com.LastBite.modules.store.enums;
 
 /**
- * Business category of a store.
+ * Danh mục kinh doanh của cửa hàng.
  */
 public enum StoreCategory {
     BAKERY,

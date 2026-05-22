@@ -7,8 +7,8 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 /**
- * Delivery address belonging to a user.
- * One user can have multiple addresses with one marked as default.
+ * Địa chỉ giao hàng thuộc về một người dùng.
+ * Một người dùng có thể có nhiều địa chỉ, trong đó một địa chỉ được đánh dấu mặc định.
  */
 @Entity
 @Table(name = "user_addresses", indexes = {
@@ -25,7 +25,7 @@ public class UserAddress extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    /** Label: HOME, OFFICE, OTHER */
+    /** Nhãn: HOME, OFFICE, OTHER */
     @Column(nullable = false, length = 50)
     @Builder.Default
     private String label = "HOME";

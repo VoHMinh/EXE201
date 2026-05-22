@@ -36,7 +36,7 @@ RUN adduser \
     --uid "${UID}" \
     appuser
 
-# This is the command to save some private file to Container Volume, we will use it later
+# Lệnh mẫu để lưu file riêng tư vào container volume nếu cần dùng sau này
 # RUN mkdir -p /app/keys && chown appuser:appuser /app/keys
 # COPY key/private_key.pem /app/keys/cloudfront-private-key.pem
 # RUN chown appuser:appuser /app/keys/cloudfront-private-key.pem && chmod 600 /app/keys/cloudfront-private-key.pem

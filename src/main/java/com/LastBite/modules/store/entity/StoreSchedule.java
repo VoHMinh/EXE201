@@ -8,7 +8,7 @@ import lombok.experimental.SuperBuilder;
 import java.time.LocalTime;
 
 /**
- * Weekly schedule for a store (one row per day of week).
+ * Lịch mở cửa hằng tuần của cửa hàng (một dòng cho mỗi ngày trong tuần).
  */
 @Entity
 @Table(name = "store_schedules",

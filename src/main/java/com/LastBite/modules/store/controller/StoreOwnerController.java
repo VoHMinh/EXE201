@@ -19,17 +19,17 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Store management endpoints — requires STORE_OWNER role.
+ * Endpoint quản lý cửa hàng — yêu cầu role STORE_OWNER.
  * <p>
- * Note: Store creation happens during partner registration at
- * {@code POST /api/v1/auth/register-partner}. This controller
- * only handles viewing and updating an existing store.
+ * Lưu ý: Cửa hàng được tạo trong lúc đăng ký đối tác tại
+ * {@code POST /api/v1/auth/register-partner}. Controller này
+ * chỉ xử lý việc xem và cập nhật cửa hàng đã tồn tại.
  */
 @RestController
 @RequestMapping("/api/v1/store-owner/store")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('STORE_OWNER')")
-@Tag(name = "Store Owner", description = "Quản lý cửa hàng (dành cho chủ cửa hàng đã đăng ký)")
+@Tag(name = "Chủ cửa hàng", description = "Quản lý cửa hàng (dành cho chủ cửa hàng đã đăng ký)")
 public class StoreOwnerController {
 
     private final StoreService storeService;

@@ -7,10 +7,10 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * CORS configuration — reads allowed origins from YAML/env instead of hardcoding.
+ * Cấu hình CORS — đọc allowed origins từ YAML/env thay vì hard-code.
  * <p>
- * Set {@code APP_CORS_ALLOWED_ORIGINS} env var (comma-separated) to control which
- * front-end domains are permitted.
+ * Cấu hình biến môi trường {@code APP_CORS_ALLOWED_ORIGINS} dạng phân tách bằng
+ * dấu phẩy để kiểm soát domain front-end được phép gọi API.
  */
 @Configuration
 public class CorsConfig {

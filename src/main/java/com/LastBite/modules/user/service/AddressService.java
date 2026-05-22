@@ -29,7 +29,7 @@ public class AddressService {
     private final UserRepository userRepository;
 
     /**
-     * Get all addresses for a user (cached).
+     * Lấy toàn bộ địa chỉ của người dùng (có cache).
      */
     @Cacheable(value = "user-addresses", key = "#userId")
     public List<AddressResponse> getAddresses(UUID userId) {
@@ -40,7 +40,7 @@ public class AddressService {
     }
 
     /**
-     * Add a new address — evicts cache.
+     * Thêm địa chỉ mới — xóa cache liên quan.
      */
     @Transactional
     @CacheEvict(value = "user-addresses", key = "#userId")
@@ -67,12 +67,12 @@ public class AddressService {
                 .build();
 
         address = addressRepository.save(address);
-        log.info("Address added for user {}: {}", userId, address.getId());
+        log.info("Đã thêm địa chỉ cho người dùng {}: {}", userId, address.getId());
         return toResponse(address);
     }
 
     /**
-     * Update an existing address — evicts cache.
+     * Cập nhật địa chỉ hiện có — xóa cache liên quan.
      */
     @Transactional
     @CacheEvict(value = "user-addresses", key = "#userId")
@@ -95,7 +95,7 @@ public class AddressService {
     }
 
     /**
-     * Delete an address — evicts cache.
+     * Xóa địa chỉ — xóa cache liên quan.
      */
     @Transactional
     @CacheEvict(value = "user-addresses", key = "#userId")
@@ -103,11 +103,11 @@ public class AddressService {
         UserAddress address = addressRepository.findByIdAndUserId(addressId, userId)
                 .orElseThrow(() -> new ApiException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy địa chỉ"));
         addressRepository.delete(address);
-        log.info("Address deleted: {} for user {}", addressId, userId);
+        log.info("Đã xóa địa chỉ {} của người dùng {}", addressId, userId);
     }
 
     /**
-     * Set an address as default — evicts cache.
+     * Đặt địa chỉ làm mặc định — xóa cache liên quan.
      */
     @Transactional
     @CacheEvict(value = "user-addresses", key = "#userId")

@@ -1,18 +1,18 @@
 package com.LastBite.modules.auth.enums;
 
 /**
- * Store registration application status.
+ * Trạng thái hồ sơ đăng ký cửa hàng.
  * <p>
- * Flow: PENDING → APPROVED / REJECTED
+ * Luồng: PENDING → APPROVED / REJECTED
  */
 public enum StoreRegistrationStatus {
 
-    /** Application submitted, waiting for admin review. */
+    /** Hồ sơ đã gửi, đang chờ admin duyệt. */
     PENDING,
 
-    /** Admin approved — user granted ROLE_STORE_OWNER. */
+    /** Admin đã duyệt — người dùng được cấp ROLE_STORE_OWNER. */
     APPROVED,
 
-    /** Admin rejected — user remains ROLE_CUSTOMER. */
+    /** Admin từ chối — người dùng giữ ROLE_CUSTOMER. */
     REJECTED
 }

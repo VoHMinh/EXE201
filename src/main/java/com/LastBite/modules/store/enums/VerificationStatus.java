@@ -1,15 +1,15 @@
 package com.LastBite.modules.store.enums;
 
 /**
- * Admin verification status for a store.
+ * Trạng thái admin xác minh cửa hàng.
  * <p>
- * Flow: PENDING → VERIFIED (appears on app) / REJECTED (with reason)
+ * Luồng: PENDING → VERIFIED (hiển thị trên app) / REJECTED (kèm lý do)
  */
 public enum VerificationStatus {
-    /** Awaiting admin review. */
+    /** Đang chờ admin duyệt. */
     PENDING,
-    /** Approved — store is visible to customers. */
+    /** Đã duyệt — cửa hàng hiển thị với khách hàng. */
     VERIFIED,
-    /** Rejected — owner can edit and resubmit. */
+    /** Bị từ chối — chủ cửa hàng có thể chỉnh sửa và gửi lại. */
     REJECTED
 }

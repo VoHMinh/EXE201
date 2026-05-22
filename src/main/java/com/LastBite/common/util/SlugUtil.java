@@ -5,7 +5,7 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
- * Utility to generate URL-friendly slugs from Vietnamese/Unicode text.
+ * Tiện ích tạo slug thân thiện URL từ tiếng Việt/Unicode.
  * <p>
  * Example: "Bánh Mì Sài Gòn" → "banh-mi-sai-gon"
  */
@@ -15,7 +15,7 @@ public final class SlugUtil {
     private static final Pattern WHITESPACE = Pattern.compile("[\\s]+");
     private static final Pattern MULTIPLE_DASHES = Pattern.compile("-{2,}");
 
-    // Vietnamese diacritics mapping
+    // Bảng chuyển ký tự tiếng Việt có dấu
     private static final String[][] VIETNAMESE_MAP = {
             {"à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ", "a"},
             {"è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ", "e"},
@@ -36,7 +36,7 @@ public final class SlugUtil {
     private SlugUtil() {}
 
     /**
-     * Generate a slug from the given input text.
+     * Tạo slug từ chuỗi đầu vào.
      *
      * @param input the text to slugify (e.g. "Bánh Mì Sài Gòn")
      * @return URL-friendly slug (e.g. "banh-mi-sai-gon")
@@ -46,35 +46,35 @@ public final class SlugUtil {
 
         String result = input.trim();
 
-        // Replace Vietnamese characters first
+        // Chuyển ký tự tiếng Việt trước
         for (String[] mapping : VIETNAMESE_MAP) {
             result = result.replaceAll(mapping[0], mapping[1]);
         }
 
-        // Standard Unicode normalization
+        // Chuẩn hóa Unicode
         result = Normalizer.normalize(result, Normalizer.Form.NFD);
         result = result.replaceAll("[\\p{InCombiningDiacriticalMarks}]", "");
 
-        // Lowercase
+        // Chuyển về chữ thường
         result = result.toLowerCase(Locale.ROOT);
 
-        // Replace whitespace with dash
+        // Thay khoảng trắng bằng dấu gạch ngang
         result = WHITESPACE.matcher(result).replaceAll("-");
 
-        // Remove non-latin chars
+        // Xóa ký tự không thuộc latin
         result = NON_LATIN.matcher(result).replaceAll("");
 
-        // Collapse multiple dashes
+        // Gộp nhiều dấu gạch ngang liên tiếp
         result = MULTIPLE_DASHES.matcher(result).replaceAll("-");
 
-        // Trim leading/trailing dashes
+        // Xóa dấu gạch ngang ở đầu/cuối
         result = result.replaceAll("^-|-$", "");
 
         return result;
     }
 
     /**
-     * Generate a unique slug by appending a suffix if needed.
+     * Tạo slug duy nhất bằng cách thêm hậu tố nếu cần.
      */
     public static String toUniqueSlug(String input, java.util.function.Predicate<String> existsCheck) {
         String base = toSlug(input);
@@ -84,7 +84,7 @@ public final class SlugUtil {
             String candidate = base + "-" + i;
             if (!existsCheck.test(candidate)) return candidate;
         }
-        // Fallback: append random suffix
+        // Dự phòng: thêm hậu tố ngẫu nhiên
         return base + "-" + java.util.UUID.randomUUID().toString().substring(0, 6);
     }
 }

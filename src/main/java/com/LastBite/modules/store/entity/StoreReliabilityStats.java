@@ -9,10 +9,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Reliability statistics for a store (1:1 with stores).
+ * Thống kê độ tin cậy của cửa hàng (1:1 với stores).
  * <p>
- * Tracks fulfillment rate for the auto-penalty system.
- * Created automatically when a store is registered.
+ * Theo dõi tỷ lệ hoàn tất để phục vụ hệ thống phạt tự động.
+ * Được tạo tự động khi cửa hàng đăng ký.
  */
 @Entity
 @Table(name = "store_reliability_stats")

@@ -24,7 +24,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
-@Tag(name = "User Profile", description = "Quản lý hồ sơ cá nhân và địa chỉ")
+@Tag(name = "Hồ sơ người dùng", description = "Quản lý hồ sơ cá nhân và địa chỉ")
 public class UserController {
 
     private final UserService userService;

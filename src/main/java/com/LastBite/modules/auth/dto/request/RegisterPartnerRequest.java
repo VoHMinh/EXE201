@@ -8,8 +8,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
- * Request DTO for partner (store owner) registration.
- * Creates BOTH the user account (role = STORE_OWNER) AND the store in a single step.
+ * DTO request đăng ký đối tác (chủ cửa hàng).
+ * Tạo cả tài khoản người dùng (role = STORE_OWNER) và cửa hàng trong một bước.
  */
 @Data
 public class RegisterPartnerRequest {

@@ -10,10 +10,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Store owner application — requires admin approval before granting ROLE_STORE_OWNER.
+ * Hồ sơ đăng ký chủ cửa hàng — cần admin duyệt trước khi cấp ROLE_STORE_OWNER.
  * <p>
- * Flow: User submits form → status = PENDING → Admin reviews →
- * APPROVED (user.role → STORE_OWNER) or REJECTED (with reason).
+ * Luồng: Người dùng gửi form → status = PENDING → Admin duyệt →
+ * APPROVED (user.role → STORE_OWNER) hoặc REJECTED (kèm lý do).
  */
 @Entity
 @Table(name = "store_registrations", indexes = {
@@ -27,7 +27,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class StoreRegistration extends BaseEntity {
 
-    /** The user who submitted this application. */
+    /** Người dùng đã gửi hồ sơ này. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -38,7 +38,7 @@ public class StoreRegistration extends BaseEntity {
     @Column(name = "business_license_number", length = 100)
     private String businessLicenseNumber;
 
-    /** URL to uploaded business license image (stored in S3/cloud storage). */
+    /** URL ảnh giấy phép kinh doanh đã upload (lưu trên S3/cloud storage). */
     @Column(name = "business_license_image_url", length = 500)
     private String businessLicenseImageUrl;
 
@@ -50,7 +50,7 @@ public class StoreRegistration extends BaseEntity {
     @Builder.Default
     private StoreRegistrationStatus status = StoreRegistrationStatus.PENDING;
 
-    /** Admin who reviewed this application. */
+    /** Admin đã duyệt hồ sơ này. */
     @Column(name = "reviewed_by")
     private UUID reviewedBy;
 

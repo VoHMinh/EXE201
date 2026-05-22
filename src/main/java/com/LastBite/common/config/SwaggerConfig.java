@@ -13,10 +13,10 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 
 /**
- * OpenAPI 3.0 / Swagger UI configuration.
+ * Cấu hình OpenAPI 3.0 / Swagger UI.
  * <p>
- * Provides JWT Bearer authentication scheme globally so all protected endpoints
- * show the lock icon and accept tokens from the Swagger UI.
+ * Cung cấp scheme xác thực JWT Bearer toàn cục để các endpoint được bảo vệ
+ * hiển thị biểu tượng khóa và nhận token từ Swagger UI.
  */
 @Configuration
 public class SwaggerConfig {

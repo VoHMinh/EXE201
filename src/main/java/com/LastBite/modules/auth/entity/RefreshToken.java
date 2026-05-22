@@ -8,10 +8,10 @@ import lombok.experimental.SuperBuilder;
 import java.time.Instant;
 
 /**
- * Refresh token — stored hashed in DB for security.
+ * Refresh token — lưu dạng hash trong DB để đảm bảo an toàn.
  * <p>
- * Implements <b>Token Rotation</b>: each refresh produces a new token
- * and invalidates the old one. Reuse of an old token triggers full revocation.
+ * Áp dụng <b>xoay vòng token</b>: mỗi lần refresh tạo token mới và vô hiệu token cũ.
+ * Việc dùng lại token cũ sẽ kích hoạt thu hồi toàn bộ phiên.
  */
 @Entity
 @Table(name = "refresh_tokens", indexes = {
@@ -29,7 +29,7 @@ public class RefreshToken extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    /** SHA-256 hash of the actual token value (never store raw tokens). */
+    /** Hash SHA-256 của token thật (không bao giờ lưu token thô). */
     @Column(name = "token_hash", nullable = false, unique = true, length = 255)
     private String tokenHash;
 

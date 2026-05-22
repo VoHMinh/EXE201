@@ -1,6 +1,6 @@
--- V5 - Auth hardening
--- - email_verification_tokens supports either OTP or one-time link token
--- - access token duration is controlled by config; refresh token is moved to httpOnly cookie at API layer
+-- V5 - Gia cố auth
+-- - email_verification_tokens hỗ trợ OTP hoặc token link một lần
+-- - thời hạn access token do config quản lý; refresh token chuyển sang httpOnly cookie ở tầng API
 
 ALTER TABLE email_verification_tokens
     ALTER COLUMN otp_code DROP NOT NULL;
@@ -11,4 +11,3 @@ ALTER TABLE email_verification_tokens
 CREATE UNIQUE INDEX IF NOT EXISTS uq_email_verify_token_hash
     ON email_verification_tokens(token_hash)
     WHERE token_hash IS NOT NULL;
-

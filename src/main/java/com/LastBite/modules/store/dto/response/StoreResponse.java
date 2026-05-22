@@ -13,7 +13,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Store summary — used in search results (no schedules).
+ * Tóm tắt cửa hàng — dùng trong kết quả tìm kiếm (không gồm lịch mở cửa).
  */
 @Data
 @Builder

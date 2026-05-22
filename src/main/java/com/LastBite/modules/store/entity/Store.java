@@ -13,9 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A store (restaurant, bakery, etc.) owned by a STORE_OWNER.
+ * Cửa hàng do STORE_OWNER sở hữu.
  * <p>
- * Schedules are eagerly fetched via {@code @NamedEntityGraph} to prevent N+1.
+ * Lịch mở cửa được fetch bằng {@code @NamedEntityGraph} để tránh N+1.
  */
 @Entity
 @Table(name = "stores", indexes = {
@@ -108,7 +108,7 @@ public class Store extends BaseEntity {
     @Builder.Default
     private List<StoreSchedule> schedules = new ArrayList<>();
 
-    /** Helper to replace all schedules at once. */
+    /** Hàm hỗ trợ thay toàn bộ lịch mở cửa cùng lúc. */
     public void replaceSchedules(List<StoreSchedule> newSchedules) {
         this.schedules.clear();
         newSchedules.forEach(s -> s.setStore(this));

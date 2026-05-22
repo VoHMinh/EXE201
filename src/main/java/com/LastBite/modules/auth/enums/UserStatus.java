@@ -1,16 +1,16 @@
 package com.LastBite.modules.auth.enums;
 
 /**
- * Account lifecycle status.
+ * Trạng thái vòng đời tài khoản.
  */
 public enum UserStatus {
 
-    /** Account is fully active and can use all features. */
+    /** Tài khoản đang hoạt động và có thể dùng đầy đủ tính năng. */
     ACTIVE,
 
-    /** Account has been temporarily deactivated (by user or admin). */
+    /** Tài khoản tạm thời bị vô hiệu hóa bởi người dùng hoặc admin. */
     INACTIVE,
 
-    /** Account has been permanently banned by admin. */
+    /** Tài khoản bị admin cấm vĩnh viễn. */
     BANNED
 }

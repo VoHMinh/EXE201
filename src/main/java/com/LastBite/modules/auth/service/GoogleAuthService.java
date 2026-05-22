@@ -23,9 +23,9 @@ import java.time.Instant;
 import java.util.Collections;
 
 /**
- * Google OAuth2 authentication service.
+ * Dịch vụ xác thực Google OAuth2.
  * <p>
- * Flow:
+ * Luồng:
  * <ol>
  *   <li>FE uses Google Sign-In SDK → gets an {@code id_token}</li>
  *   <li>FE sends {@code id_token} to {@code POST /api/v1/auth/google}</li>
@@ -54,19 +54,19 @@ public class GoogleAuthService {
                     new NetHttpTransport(), GsonFactory.getDefaultInstance())
                     .setAudience(Collections.singletonList(googleClientId))
                     .build();
-            log.info("GoogleAuthService initialised with clientId: {}...{}",
+            log.info("GoogleAuthService đã khởi tạo với clientId: {}...{}",
                     googleClientId.substring(0, Math.min(8, googleClientId.length())),
                     googleClientId.substring(Math.max(0, googleClientId.length() - 4)));
         } else {
-            log.warn("Google OAuth is DISABLED — app.google.client-id is not set");
+            log.warn("Google OAuth đang TẮT — chưa cấu hình app.google.client-id");
         }
     }
 
     /**
-     * Authenticate with a Google {@code id_token}.
+     * Xác thực bằng {@code id_token} của Google.
      * <p>
-     * If the user doesn't exist, creates a new CUSTOMER account with
-     * {@code emailVerified = true} (Google already verified the email).
+     * Nếu người dùng chưa tồn tại, tạo tài khoản CUSTOMER mới với
+     * {@code emailVerified = true} vì Google đã xác minh email.
      */
     @Transactional
     public AuthResponse authenticateWithGoogle(String idTokenString) {
@@ -78,7 +78,7 @@ public class GoogleAuthService {
         try {
             idToken = verifier.verify(idTokenString);
         } catch (Exception e) {
-            log.warn("Google token verification failed: {}", e.getMessage());
+            log.warn("Xác minh Google token thất bại: {}", e.getMessage());
             throw new ApiException(ErrorCode.TOKEN_INVALID, "Google ID token không hợp lệ");
         }
 
@@ -95,7 +95,7 @@ public class GoogleAuthService {
             throw new ApiException(ErrorCode.INVALID_INPUT, "Google token không chứa email");
         }
 
-        // Find or create user
+        // Tìm hoặc tạo người dùng
         User user = userRepository.findByEmail(email.toLowerCase().trim())
                 .map(existingUser -> handleExistingUser(existingUser, avatarUrl))
                 .orElseGet(() -> createGoogleUser(email, fullName, avatarUrl));
@@ -111,11 +111,11 @@ public class GoogleAuthService {
             throw new ApiException(ErrorCode.ACCOUNT_DISABLED);
         }
 
-        // Update avatar if user doesn't have one
+        // Cập nhật ảnh đại diện nếu người dùng chưa có
         if (user.getAvatarUrl() == null && avatarUrl != null) {
             user.setAvatarUrl(avatarUrl);
         }
-        // Mark email as verified (Google confirmed it)
+        // Đánh dấu email đã xác minh vì Google đã xác nhận
         if (!user.isEmailVerified()) {
             user.setEmailVerified(true);
         }
@@ -131,12 +131,12 @@ public class GoogleAuthService {
                 .role(UserRole.CUSTOMER)
                 .status(UserStatus.ACTIVE)
                 .authProvider(AuthProvider.GOOGLE)
-                .emailVerified(true)   // Google already verified
+                .emailVerified(true)   // Google đã xác minh
                 .phoneVerified(false)
                 .build();
 
         user = userRepository.save(user);
-        log.info("New Google user created: {} ({})", user.getEmail(), user.getId());
+        log.info("Đã tạo người dùng Google mới: {} ({})", user.getEmail(), user.getId());
         return user;
     }
 

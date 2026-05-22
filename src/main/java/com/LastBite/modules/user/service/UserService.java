@@ -26,7 +26,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     /**
-     * Get user profile (cached in Redis for 30 min).
+     * Lấy hồ sơ người dùng (cache Redis 30 phút).
      */
     @Cacheable(value = "user-profile", key = "#userId")
     public UserResponse getProfile(UUID userId) {
@@ -35,7 +35,7 @@ public class UserService {
     }
 
     /**
-     * Update user profile — evicts cache.
+     * Cập nhật hồ sơ người dùng — xóa cache liên quan.
      */
     @Transactional
     @CacheEvict(value = "user-profile", key = "#userId")
@@ -46,7 +46,7 @@ public class UserService {
             user.setFullName(request.getFullName().trim());
         }
         if (request.getPhone() != null) {
-            // Check phone uniqueness
+            // Kiểm tra số điện thoại không bị trùng
             if (!request.getPhone().isBlank()
                     && !request.getPhone().equals(user.getPhone())
                     && userRepository.existsByPhone(request.getPhone())) {
@@ -59,12 +59,12 @@ public class UserService {
         }
 
         user = userRepository.save(user);
-        log.info("Profile updated for user: {}", user.getEmail());
+        log.info("Đã cập nhật hồ sơ cho người dùng: {}", user.getEmail());
         return toUserResponse(user);
     }
 
     /**
-     * Change password — evicts cache.
+     * Đổi mật khẩu — xóa cache liên quan.
      */
     @Transactional
     @CacheEvict(value = "user-profile", key = "#userId")
@@ -82,7 +82,7 @@ public class UserService {
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
-        log.info("Password changed for user: {}", user.getEmail());
+        log.info("Đã đổi mật khẩu cho người dùng: {}", user.getEmail());
     }
 
     // ── Helpers ──
