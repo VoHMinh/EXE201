@@ -9,10 +9,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Stores OTP codes for email verification.
+ * Stores one-time email verification challenges.
  * <p>
- * Each user can have multiple tokens (resend). Only the latest non-expired,
- * non-verified token is valid. Max 5 attempts per token.
+ * A challenge is either an OTP code or a verification-link token hash. Each
+ * concrete flow uses one method only.
  */
 @Entity
 @Table(name = "email_verification_tokens")
@@ -33,8 +33,11 @@ public class EmailVerificationToken {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "otp_code", nullable = false, length = 6)
+    @Column(name = "otp_code", length = 6)
     private String otpCode;
+
+    @Column(name = "token_hash", unique = true, length = 255)
+    private String tokenHash;
 
     @Column(nullable = false)
     @Builder.Default

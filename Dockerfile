@@ -48,4 +48,6 @@ COPY --from=extract build/target/extracted/application/ ./
 
 EXPOSE 8080
 
+USER appuser
+
 ENTRYPOINT [ "java", "org.springframework.boot.loader.launch.JarLauncher" ]

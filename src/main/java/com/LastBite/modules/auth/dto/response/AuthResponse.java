@@ -1,6 +1,7 @@
 package com.LastBite.modules.auth.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,6 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class AuthResponse {
 
     @JsonProperty("access_token")
@@ -24,4 +26,12 @@ public class AuthResponse {
 
     @JsonProperty("expires_in")
     private long expiresIn;
+
+    public AuthResponse withoutRefreshToken() {
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .tokenType(tokenType)
+                .expiresIn(expiresIn)
+                .build();
+    }
 }

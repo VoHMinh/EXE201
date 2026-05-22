@@ -1,6 +1,5 @@
 package com.LastBite.common.service;
 
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +7,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.HtmlUtils;
 
 /**
  * Email sending service using Spring Boot Starter Mail (Gmail SMTP).
@@ -36,9 +36,29 @@ public class EmailService {
 
             mailSender.send(message);
             log.info("OTP email sent to {}", toEmail);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send OTP email to {}: {}", toEmail, e.getMessage(), e);
             // Don't throw — the user can resend OTP via /auth/resend-otp
+        }
+    }
+
+    /**
+     * Send a one-time email verification link for registration flows.
+     */
+    @Async
+    public void sendVerificationLinkEmail(String toEmail, String fullName, String verificationLink) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(toEmail);
+            helper.setSubject("LastBite — Xác minh email của bạn");
+            helper.setText(buildVerificationLinkHtml(fullName, verificationLink), true);
+
+            mailSender.send(message);
+            log.info("Verification link email sent to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send verification link email to {}: {}", toEmail, e.getMessage(), e);
         }
     }
 
@@ -88,6 +108,52 @@ public class EmailService {
               </table>
             </body>
             </html>
-            """.formatted(fullName, otpCode);
+            """.formatted(escape(fullName), escape(otpCode));
+    }
+
+    private String buildVerificationLinkHtml(String fullName, String verificationLink) {
+        return """
+            <!DOCTYPE html>
+            <html lang="vi">
+            <head><meta charset="UTF-8"></head>
+            <body style="margin:0;padding:0;background:#f4f4f7;font-family:'Segoe UI',Roboto,Arial,sans-serif">
+              <table width="100%%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:40px 0">
+                <tr><td align="center">
+                  <table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
+                    <tr>
+                      <td style="background:#16a34a;padding:32px 40px;text-align:center">
+                        <h1 style="margin:0;color:#fff;font-size:28px;font-weight:700">LastBite</h1>
+                        <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:14px">Xác minh email</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:32px 40px">
+                        <p style="margin:0 0 16px;color:#333;font-size:16px">Xin chào <strong>%s</strong>,</p>
+                        <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.6">
+                          Vui lòng bấm nút bên dưới để xác minh email cho tài khoản LastBite của bạn.
+                        </p>
+                        <div style="text-align:center;margin:0 0 24px">
+                          <a href="%s" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;border-radius:8px;padding:14px 28px;font-size:15px;font-weight:700">
+                            Xác minh email
+                          </a>
+                        </div>
+                        <p style="margin:0 0 8px;color:#888;font-size:13px;text-align:center">
+                          Link có hiệu lực trong <strong>24 giờ</strong>.
+                        </p>
+                        <p style="margin:0;color:#888;font-size:13px;text-align:center">
+                          Nếu bạn không tạo tài khoản LastBite, vui lòng bỏ qua email này.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>
+            """.formatted(escape(fullName), escape(verificationLink));
+    }
+
+    private String escape(String value) {
+        return HtmlUtils.htmlEscape(value == null ? "" : value);
     }
 }

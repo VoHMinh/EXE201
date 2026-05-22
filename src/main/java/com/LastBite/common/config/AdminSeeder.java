@@ -10,9 +10,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.env.Environment;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Arrays;
 
 /**
  * Seeds a default ADMIN account on application startup if it does not exist.
@@ -30,6 +33,7 @@ public class AdminSeeder implements ApplicationRunner {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final Environment environment;
 
     @Value("${app.admin.email:admin@lastbite.com}")
     private String adminEmail;
@@ -43,6 +47,10 @@ public class AdminSeeder implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        if (isProdProfile() && "Admin@123456".equals(adminPassword)) {
+            throw new IllegalStateException("ADMIN_PASSWORD must be set in production");
+        }
+
         try {
             if (userRepository.existsByEmail(adminEmail)) {
                 log.info("Admin account already exists: {}", adminEmail);
@@ -65,5 +73,9 @@ public class AdminSeeder implements ApplicationRunner {
         } catch (Exception e) {
             log.warn("Admin seeder skipped due to error (app continues normally): {}", e.getMessage());
         }
+    }
+
+    private boolean isProdProfile() {
+        return Arrays.asList(environment.getActiveProfiles()).contains("prod");
     }
 }

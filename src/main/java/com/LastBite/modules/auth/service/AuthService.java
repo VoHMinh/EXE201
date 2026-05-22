@@ -21,10 +21,13 @@ import com.LastBite.modules.store.dto.request.CreateStoreRequest;
 import com.LastBite.modules.store.service.StoreService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.UUID;
@@ -44,12 +47,15 @@ public class AuthService {
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final int OTP_EXPIRY_MINUTES = 10;
+    private static final int VERIFICATION_LINK_EXPIRY_HOURS = 24;
+
+    @Value("${app.auth.email-verification-url:http://localhost:8080/api/v1/auth/verify-email-link}")
+    private String emailVerificationUrl;
 
     /**
      * Register a new CUSTOMER account with email + password.
      * <p>
-     * Does NOT return tokens — user must verify email first via OTP.
-     * Sends an OTP code to the provided email address.
+     * Does NOT return tokens — user must verify email first via verification link.
      */
     @Transactional
     public void register(RegisterRequest request) {
@@ -75,16 +81,15 @@ public class AuthService {
                 .build();
 
         user = userRepository.save(user);
-        log.info("New user registered: {} ({}) — awaiting OTP verification", user.getEmail(), user.getId());
+        log.info("New user registered: {} ({}) — awaiting email link verification", user.getEmail(), user.getId());
 
-        // Generate and send OTP
-        sendOtp(user);
+        sendVerificationLink(user);
     }
 
     /**
      * Register a new STORE_OWNER account + create the Store in one step.
      * <p>
-     * Does NOT return tokens — user must verify email first via OTP.
+     * Does NOT return tokens — user must verify email first via verification link.
      */
     @Transactional
     public void registerPartner(RegisterPartnerRequest request) {
@@ -130,11 +135,10 @@ public class AuthService {
 
         storeService.createStoreInternal(user, storeReq);
 
-        log.info("New partner registered: {} ({}) with store: {} — awaiting OTP verification",
+        log.info("New partner registered: {} ({}) with store: {} — awaiting email link verification",
                 user.getEmail(), user.getId(), request.getStoreName());
 
-        // Generate and send OTP
-        sendOtp(user);
+        sendVerificationLink(user);
     }
 
     /**
@@ -152,7 +156,7 @@ public class AuthService {
         }
 
         EmailVerificationToken token = emailTokenRepository
-                .findLatestValidByUserId(user.getId(), Instant.now())
+                .findLatestValidOtpByUserId(user.getId(), Instant.now())
                 .orElseThrow(() -> new ApiException(ErrorCode.OTP_EXPIRED));
 
         if (token.hasMaxAttempts()) {
@@ -177,6 +181,35 @@ public class AuthService {
     }
 
     /**
+     * Verify email using a one-time link token.
+     * <p>
+     * This is the registration verification flow. OTP remains available for
+     * separate high-risk flows where typing a short-lived code is preferred.
+     */
+    @Transactional
+    public AuthResponse verifyEmailLink(String rawToken) {
+        String tokenHash = jwtService.hashToken(rawToken);
+        EmailVerificationToken token = emailTokenRepository
+                .findValidLinkByTokenHash(tokenHash, Instant.now())
+                .orElseThrow(() -> new ApiException(ErrorCode.TOKEN_INVALID,
+                        "Link xác minh email không hợp lệ hoặc đã hết hạn"));
+
+        User user = token.getUser();
+        if (user.isEmailVerified()) {
+            throw new ApiException(ErrorCode.EMAIL_ALREADY_VERIFIED);
+        }
+
+        token.setVerified(true);
+        emailTokenRepository.save(token);
+
+        user.setEmailVerified(true);
+        userRepository.save(user);
+
+        log.info("Email verified by link for user: {}", user.getEmail());
+        return buildAuthResponse(user);
+    }
+
+    /**
      * Resend OTP to user's email. Deletes previous unverified tokens first.
      */
     @Transactional
@@ -189,6 +222,21 @@ public class AuthService {
         }
 
         sendOtp(user);
+    }
+
+    /**
+     * Resend registration verification link.
+     */
+    @Transactional
+    public void resendVerificationLink(ResendOtpRequest request) {
+        User user = userRepository.findByEmail(request.getEmail().toLowerCase().trim())
+                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.isEmailVerified()) {
+            throw new ApiException(ErrorCode.EMAIL_ALREADY_VERIFIED);
+        }
+
+        sendVerificationLink(user);
     }
 
     /**
@@ -293,6 +341,26 @@ public class AuthService {
 
         // Send email asynchronously
         emailService.sendOtpEmail(user.getEmail(), user.getFullName(), otp);
+    }
+
+    private void sendVerificationLink(User user) {
+        emailTokenRepository.deleteUnverifiedByUserId(user.getId());
+
+        String rawToken = jwtService.generateRefreshToken();
+        String tokenHash = jwtService.hashToken(rawToken);
+
+        EmailVerificationToken token = EmailVerificationToken.builder()
+                .user(user)
+                .tokenHash(tokenHash)
+                .expiresAt(Instant.now().plusSeconds(VERIFICATION_LINK_EXPIRY_HOURS * 3600L))
+                .build();
+        emailTokenRepository.save(token);
+
+        String separator = emailVerificationUrl.contains("?") ? "&" : "?";
+        String link = emailVerificationUrl + separator + "token="
+                + URLEncoder.encode(rawToken, StandardCharsets.UTF_8);
+
+        emailService.sendVerificationLinkEmail(user.getEmail(), user.getFullName(), link);
     }
 
     private AuthResponse buildAuthResponse(User user) {

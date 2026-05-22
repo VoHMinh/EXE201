@@ -16,10 +16,25 @@ public interface EmailVerificationTokenRepository extends JpaRepository<EmailVer
      */
     @Query("""
         SELECT t FROM EmailVerificationToken t
-        WHERE t.user.id = :userId AND t.verified = false AND t.expiresAt > :now
+        WHERE t.user.id = :userId
+          AND t.otpCode IS NOT NULL
+          AND t.verified = false
+          AND t.expiresAt > :now
         ORDER BY t.createdAt DESC LIMIT 1
         """)
-    Optional<EmailVerificationToken> findLatestValidByUserId(UUID userId, Instant now);
+    Optional<EmailVerificationToken> findLatestValidOtpByUserId(UUID userId, Instant now);
+
+    /**
+     * Find a non-expired verification-link challenge by token hash.
+     */
+    @Query("""
+        SELECT t FROM EmailVerificationToken t
+        WHERE t.tokenHash = :tokenHash
+          AND t.tokenHash IS NOT NULL
+          AND t.verified = false
+          AND t.expiresAt > :now
+        """)
+    Optional<EmailVerificationToken> findValidLinkByTokenHash(String tokenHash, Instant now);
 
     /**
      * Invalidate all previous tokens for a user (used before issuing a new OTP).

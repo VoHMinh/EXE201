@@ -16,29 +16,20 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Manages refresh tokens with <b>Redis + DB dual-write</b> strategy
- * and <b>reuse detection</b>.
- * <p>
- * <b>Token Rotation:</b> every refresh produces a new token and invalidates the old.
- * <b>Reuse Detection:</b> if an already-revoked token is used again, ALL sessions
- * for that user are revoked (indicates the token was stolen).
+ * Manages refresh tokens with Redis + DB dual-write and reuse detection.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class RefreshTokenService {
 
+    private static final String REDIS_PREFIX = "rt:";
+    private static final String REDIS_USER_PREFIX = "rt:user:";
+
     private final RefreshTokenRepository refreshTokenRepository;
     private final StringRedisTemplate redisTemplate;
     private final JwtService jwtService;
 
-    private static final String REDIS_PREFIX = "rt:";
-
-    /**
-     * Create and persist a new refresh token for the given user.
-     *
-     * @return the RAW token (send to client). Hash is stored in DB+Redis.
-     */
     @Transactional
     public String createRefreshToken(User user) {
         String rawToken = jwtService.generateRefreshToken();
@@ -46,7 +37,6 @@ public class RefreshTokenService {
 
         Instant expiresAt = Instant.now().plusSeconds(jwtService.getRefreshTokenDuration());
 
-        // 1. Save to DB (source of truth)
         RefreshToken entity = RefreshToken.builder()
                 .user(user)
                 .tokenHash(tokenHash)
@@ -55,13 +45,8 @@ public class RefreshTokenService {
                 .build();
         refreshTokenRepository.save(entity);
 
-        // 2. Cache in Redis with TTL (auto-expires, no cleanup needed)
         Duration ttl = Duration.between(Instant.now(), expiresAt);
-        redisTemplate.opsForValue().set(
-                REDIS_PREFIX + tokenHash,
-                user.getId().toString(),
-                ttl
-        );
+        cacheToken(tokenHash, user.getId(), ttl);
 
         log.debug("Created refresh token for user {}", user.getEmail());
         return rawToken;
@@ -69,84 +54,73 @@ public class RefreshTokenService {
 
     /**
      * Validate a raw refresh token and return the associated user ID.
-     * <p>
-     * Checks Redis first, falls back to DB on miss.
-     * <b>REUSE DETECTION:</b> if token exists in DB but is already revoked,
-     * all sessions for the user are revoked immediately.
-     *
-     * @throws ApiException if token is invalid, expired, revoked, or reused
+     * Redis is a cache only; DB revocation/expiry is still checked so a stale
+     * Redis key cannot revive a revoked session.
      */
     public UUID validateAndGetUserId(String rawToken) {
         String tokenHash = jwtService.hashToken(rawToken);
 
-        // 1. Try Redis first (fast path)
-        String cachedUserId = redisTemplate.opsForValue().get(REDIS_PREFIX + tokenHash);
-
-        if (cachedUserId != null) {
-            return UUID.fromString(cachedUserId);
-        }
-
-        // 2. Redis miss → check DB (slow path)
         RefreshToken dbToken = refreshTokenRepository.findByTokenHash(tokenHash)
                 .orElseThrow(() -> new ApiException(ErrorCode.TOKEN_INVALID,
-                        "Refresh token không hợp lệ"));
+                        "Refresh token khong hop le"));
 
-        // ── REUSE DETECTION ──
-        // If the token was already revoked, someone is trying to reuse it.
-        // This is a strong signal the token was stolen. Revoke ALL sessions.
-        if (dbToken.isRevoked()) {
-            UUID userId = dbToken.getUser().getId();
-            log.warn("🚨 SECURITY: Refresh token REUSE detected for user {}! " +
-                    "Revoking ALL sessions.", userId);
-            revokeAllByUserId(userId);
-            throw new ApiException(ErrorCode.TOKEN_REUSE_DETECTED);
-        }
+        ensureValidToken(dbToken);
 
-        if (dbToken.getExpiresAt().isBefore(Instant.now())) {
-            throw new ApiException(ErrorCode.TOKEN_EXPIRED, "Refresh token đã hết hạn");
-        }
-
-        // 3. Re-cache in Redis (heal the cache)
         Duration remaining = Duration.between(Instant.now(), dbToken.getExpiresAt());
         if (!remaining.isNegative()) {
-            redisTemplate.opsForValue().set(
-                    REDIS_PREFIX + tokenHash,
-                    dbToken.getUser().getId().toString(),
-                    remaining
-            );
+            cacheToken(tokenHash, dbToken.getUser().getId(), remaining);
         }
 
         return dbToken.getUser().getId();
     }
 
-    /**
-     * Revoke a specific refresh token (used during token rotation).
-     */
     @Transactional
     public void revokeToken(String rawToken) {
         String tokenHash = jwtService.hashToken(rawToken);
-
-        // 1. Delete from Redis (immediate effect)
         redisTemplate.delete(REDIS_PREFIX + tokenHash);
 
-        // 2. Mark revoked in DB (keep record for reuse detection!)
         refreshTokenRepository.findByTokenHashAndRevokedFalse(tokenHash)
                 .ifPresent(token -> {
                     token.setRevoked(true);
                     refreshTokenRepository.save(token);
+                    redisTemplate.opsForSet().remove(REDIS_USER_PREFIX + token.getUser().getId(), tokenHash);
                 });
     }
 
-    /**
-     * Revoke ALL refresh tokens for a user (logout everywhere / ban / reuse detection).
-     */
     @Transactional
     public void revokeAllByUserId(UUID userId) {
-        // 1. Revoke in DB
         int count = refreshTokenRepository.revokeAllByUserId(userId);
-
-        // 2. Redis keys will expire via TTL — no need to scan and delete
-
+        deleteCachedTokensForUser(userId);
         log.info("Revoked {} refresh tokens for user {}", count, userId);
+    }
+
+    private void ensureValidToken(RefreshToken dbToken) {
+        if (dbToken.isRevoked()) {
+            UUID userId = dbToken.getUser().getId();
+            log.warn("SECURITY: Refresh token reuse detected for user {}. Revoking all sessions.", userId);
+            revokeAllByUserId(userId);
+            throw new ApiException(ErrorCode.TOKEN_REUSE_DETECTED);
+        }
+
+        if (dbToken.getExpiresAt().isBefore(Instant.now())) {
+            throw new ApiException(ErrorCode.TOKEN_EXPIRED, "Refresh token da het han");
+        }
+    }
+
+    private void cacheToken(String tokenHash, UUID userId, Duration ttl) {
+        redisTemplate.opsForValue().set(REDIS_PREFIX + tokenHash, userId.toString(), ttl);
+        redisTemplate.opsForSet().add(REDIS_USER_PREFIX + userId, tokenHash);
+        redisTemplate.expire(REDIS_USER_PREFIX + userId, ttl);
+    }
+
+    private void deleteCachedTokensForUser(UUID userId) {
+        String userKey = REDIS_USER_PREFIX + userId;
+        var tokenHashes = redisTemplate.opsForSet().members(userKey);
+        if (tokenHashes != null && !tokenHashes.isEmpty()) {
+            redisTemplate.delete(tokenHashes.stream()
+                    .map(hash -> REDIS_PREFIX + hash)
+                    .toList());
+        }
+        redisTemplate.delete(userKey);
     }
 }
