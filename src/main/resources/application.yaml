@@ -4,20 +4,17 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
-  # ── MongoDB: disabled until needed ─────────────
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration
-      - org.springframework.boot.mongodb.autoconfigure.MongoAutoConfiguration
-      - org.springframework.boot.mongodb.autoconfigure.MongoDataAutoConfiguration
-
   # ── PostgreSQL (JPA) ──────────────────────────
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE:10}
+      minimum-idle: ${SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE:2}
+      idle-timeout: ${SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT:300000}
+      max-lifetime: ${SPRING_DATASOURCE_HIKARI_MAX_LIFETIME:1800000}
 
   jpa:
     open-in-view: false
@@ -36,12 +33,7 @@ spring:
     baseline-version: 0
     out-of-order: true
 
-  # ── MongoDB ───────────────────────────────────
   data:
-    mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI}
-      repositories:
-        enabled: false
     redis:
       host: ${SPRING_DATA_REDIS_HOST}
       port: ${SPRING_DATA_REDIS_PORT}
@@ -79,6 +71,10 @@ jwt:
 
 # ── Application ───────────────────────────────────
 app:
+  admin:
+    email: ${ADMIN_EMAIL:admin@lastbite.com}
+    password: ${ADMIN_PASSWORD:Admin@123456}
+    full-name: ${ADMIN_FULL_NAME:LastBite Admin}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
   google:
@@ -103,6 +99,3 @@ management:
   endpoint:
     health:
       show-details: when-authorized
-  health:
-    mongo:
-      enabled: false

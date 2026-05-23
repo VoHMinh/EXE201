@@ -27,6 +27,7 @@ RUN java -Djarmode=layertools -jar target/app.jar extract --destination target/e
 FROM eclipse-temurin:21-jre-jammy AS final
 
 ARG UID=10001
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=60.0 -XX:InitialRAMPercentage=10.0 -Dfile.encoding=UTF-8"
 RUN adduser \
     --disabled-password \
     --gecos "" \

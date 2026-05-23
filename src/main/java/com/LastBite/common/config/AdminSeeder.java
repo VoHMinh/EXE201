@@ -47,16 +47,16 @@ public class AdminSeeder implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (isProdProfile() && "Admin@123456".equals(adminPassword)) {
+        if (userRepository.existsByEmail(adminEmail)) {
+            log.info("Tài khoản admin đã tồn tại: {}", adminEmail);
+            return;
+        }
+
+        if (isProdProfile() && isDefaultAdminPassword()) {
             throw new IllegalStateException("Bắt buộc cấu hình ADMIN_PASSWORD trong production");
         }
 
         try {
-            if (userRepository.existsByEmail(adminEmail)) {
-                log.info("Tài khoản admin đã tồn tại: {}", adminEmail);
-                return;
-            }
-
             User admin = User.builder()
                     .email(adminEmail)
                     .passwordHash(passwordEncoder.encode(adminPassword))
@@ -77,5 +77,9 @@ public class AdminSeeder implements ApplicationRunner {
 
     private boolean isProdProfile() {
         return Arrays.asList(environment.getActiveProfiles()).contains("prod");
+    }
+
+    private boolean isDefaultAdminPassword() {
+        return "Admin@123456".equals(adminPassword);
     }
 }
