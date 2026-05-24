@@ -65,12 +65,15 @@ public enum ErrorCode {
     STORE_NOT_FOUND(4042, "Không tìm thấy cửa hàng", HttpStatus.NOT_FOUND),
     PRODUCT_NOT_FOUND(4043, "Không tìm thấy sản phẩm", HttpStatus.NOT_FOUND),
     ORDER_NOT_FOUND(4044, "Không tìm thấy đơn hàng", HttpStatus.NOT_FOUND),
+    BAG_NOT_FOUND(4045, "Không tìm thấy túi bất ngờ", HttpStatus.NOT_FOUND),
+    STOCK_NOT_FOUND(4046, "Không tìm thấy tồn kho ngày này", HttpStatus.NOT_FOUND),
 
     // ── 409: Conflict ────────────────────────────
     DUPLICATE_RESOURCE(4090, "Dữ liệu đã tồn tại", HttpStatus.CONFLICT),
     EMAIL_EXISTS(4091, "Email đã được đăng ký", HttpStatus.CONFLICT),
     PHONE_EXISTS(4092, "Số điện thoại đã được đăng ký", HttpStatus.CONFLICT),
     USERNAME_EXISTS(4093, "Tên đăng nhập đã tồn tại", HttpStatus.CONFLICT),
+    STOCK_CONFLICT(4094, "Tồn kho đã thay đổi — vui lòng thử lại", HttpStatus.CONFLICT),
 
     // ── 415 / 429 ────────────────────────────────
     UNSUPPORTED_MEDIA_TYPE(4150, "Loại media không được hỗ trợ", HttpStatus.UNSUPPORTED_MEDIA_TYPE),
