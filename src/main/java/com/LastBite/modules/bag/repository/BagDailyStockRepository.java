@@ -62,10 +62,14 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
                 b.name AS name,
                 b.description AS description,
                 b.bag_type AS "bagType",
+                b.category AS category,
+                b.bag_size AS "bagSize",
                 array_to_string(b.photos, ',') AS photos,
-                b.estimated_value AS "estimatedValue",
-                b.sale_price AS "salePrice",
-                COALESCE(s.sale_price_override, b.sale_price) AS "effectivePrice",
+                b.minimum_value AS "minimumValue",
+                b.base_sale_price AS "baseSalePrice",
+                b.dynamic_min_price AS "dynamicMinPrice",
+                b.dynamic_max_price AS "dynamicMaxPrice",
+                b.dynamic_pricing_enabled AS "dynamicPricingEnabled",
                 b.platform_fee AS "platformFee",
                 b.max_per_order AS "maxPerOrder",
                 b.pickup_start_time AS "pickupStartTime",
@@ -94,7 +98,7 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
               AND b.pickup_end_time > :nowTime
               AND st.lat IS NOT NULL
               AND st.lng IS NOT NULL
-              AND (:category IS NULL OR st.category = :category)
+              AND (:category IS NULL OR b.category = :category)
               AND (:district IS NULL OR LOWER(st.district) = LOWER(:district))
         )
         SELECT * FROM discovery
@@ -102,9 +106,9 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
         ORDER BY
             CASE WHEN available <= 0 THEN 1 ELSE 0 END ASC,
             CASE WHEN :sort = 'distance' THEN "distanceKm" END ASC NULLS LAST,
-            CASE WHEN :sort = 'price' THEN effectivePrice END ASC,
-            CASE WHEN :sort = 'pickup_time' THEN pickupStartTime END ASC,
-            pickupStartTime ASC
+            CASE WHEN :sort = 'price' THEN "baseSalePrice" END ASC,
+            CASE WHEN :sort = 'pickup_time' THEN "pickupStartTime" END ASC,
+            "pickupStartTime" ASC
         LIMIT :limit
     """, nativeQuery = true)
     List<BagDiscoveryProjection> discoverWithLocation(@Param("date") LocalDate date,
@@ -131,10 +135,14 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             b.name AS name,
             b.description AS description,
             b.bag_type AS "bagType",
+            b.category AS category,
+            b.bag_size AS "bagSize",
             array_to_string(b.photos, ',') AS photos,
-            b.estimated_value AS "estimatedValue",
-            b.sale_price AS "salePrice",
-            COALESCE(s.sale_price_override, b.sale_price) AS "effectivePrice",
+            b.minimum_value AS "minimumValue",
+            b.base_sale_price AS "baseSalePrice",
+            b.dynamic_min_price AS "dynamicMinPrice",
+            b.dynamic_max_price AS "dynamicMaxPrice",
+            b.dynamic_pricing_enabled AS "dynamicPricingEnabled",
             b.platform_fee AS "platformFee",
             b.max_per_order AS "maxPerOrder",
             b.pickup_start_time AS "pickupStartTime",
@@ -157,11 +165,11 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
           AND st.status = 'ACTIVE'
           AND st.verification_status = 'VERIFIED'
           AND b.pickup_end_time > :nowTime
-          AND (:category IS NULL OR st.category = :category)
+          AND (:category IS NULL OR b.category = :category)
           AND (:district IS NULL OR LOWER(st.district) = LOWER(:district))
         ORDER BY
             CASE WHEN (s.quantity - s.reserved - s.sold) <= 0 THEN 1 ELSE 0 END ASC,
-            CASE WHEN :sort = 'price' THEN COALESCE(s.sale_price_override, b.sale_price) END ASC,
+            CASE WHEN :sort = 'price' THEN b.base_sale_price END ASC,
             b.pickup_start_time ASC
         LIMIT :limit
     """, nativeQuery = true)
@@ -186,10 +194,14 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             b.name AS name,
             b.description AS description,
             b.bag_type AS "bagType",
+            b.category AS category,
+            b.bag_size AS "bagSize",
             array_to_string(b.photos, ',') AS photos,
-            b.estimated_value AS "estimatedValue",
-            b.sale_price AS "salePrice",
-            COALESCE(s.sale_price_override, b.sale_price) AS "effectivePrice",
+            b.minimum_value AS "minimumValue",
+            b.base_sale_price AS "baseSalePrice",
+            b.dynamic_min_price AS "dynamicMinPrice",
+            b.dynamic_max_price AS "dynamicMaxPrice",
+            b.dynamic_pricing_enabled AS "dynamicPricingEnabled",
             b.platform_fee AS "platformFee",
             b.max_per_order AS "maxPerOrder",
             b.pickup_start_time AS "pickupStartTime",
@@ -233,10 +245,14 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             b.name AS name,
             b.description AS description,
             b.bag_type AS "bagType",
+            b.category AS category,
+            b.bag_size AS "bagSize",
             array_to_string(b.photos, ',') AS photos,
-            b.estimated_value AS "estimatedValue",
-            b.sale_price AS "salePrice",
-            COALESCE(s.sale_price_override, b.sale_price) AS "effectivePrice",
+            b.minimum_value AS "minimumValue",
+            b.base_sale_price AS "baseSalePrice",
+            b.dynamic_min_price AS "dynamicMinPrice",
+            b.dynamic_max_price AS "dynamicMaxPrice",
+            b.dynamic_pricing_enabled AS "dynamicPricingEnabled",
             b.platform_fee AS "platformFee",
             b.max_per_order AS "maxPerOrder",
             b.pickup_start_time AS "pickupStartTime",

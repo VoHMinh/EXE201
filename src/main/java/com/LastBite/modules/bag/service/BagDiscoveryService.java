@@ -4,6 +4,7 @@ import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
 import com.LastBite.modules.bag.dto.response.PublicBagDetailResponse;
 import com.LastBite.modules.bag.dto.response.PublicBagSummaryResponse;
+import com.LastBite.modules.bag.enums.BagSize;
 import com.LastBite.modules.bag.enums.BagType;
 import com.LastBite.modules.bag.repository.BagDailyStockRepository;
 import com.LastBite.modules.bag.repository.BagDiscoveryProjection;
@@ -18,6 +19,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,6 +32,7 @@ public class BagDiscoveryService {
     private static final double DEFAULT_RADIUS_KM = 5.0;
 
     private final BagDailyStockRepository stockRepository;
+    private final BagPricingService pricingService;
     private final Clock clock;
 
     @Cacheable(value = "bag-discovery",
@@ -44,6 +47,9 @@ public class BagDiscoveryService {
                                                     String district, String sort, Integer limit) {
         String normalizedSort = normalizeSort(sort);
         int normalizedLimit = normalizeLimit(limit);
+        int queryLimit = normalizedSort.equals("price")
+                ? Math.min(100, Math.max(normalizedLimit * 3, DEFAULT_LIMIT))
+                : normalizedLimit;
         LocalDate today = LocalDate.now(clock);
         LocalTime now = LocalTime.now(clock);
         String categoryValue = category == null ? null : category.name();
@@ -61,12 +67,12 @@ public class BagDiscoveryService {
         if (hasLat) {
             rows = stockRepository.discoverWithLocation(today, now, lat, lng,
                     radiusKm == null ? DEFAULT_RADIUS_KM : radiusKm,
-                    categoryValue, normalizedDistrict, normalizedSort, normalizedLimit);
+                    categoryValue, normalizedDistrict, normalizedSort, queryLimit);
         } else {
             rows = stockRepository.discoverWithoutLocation(today, now,
-                    categoryValue, normalizedDistrict, normalizedSort, normalizedLimit);
+                    categoryValue, normalizedDistrict, normalizedSort, queryLimit);
         }
-        return rows.stream().map(this::toSummary).toList();
+        return sortSummaries(rows.stream().map(this::toSummary).toList(), normalizedSort, normalizedLimit);
     }
 
     @Cacheable(value = "bag-detail", key = "#bagId")
@@ -81,10 +87,21 @@ public class BagDiscoveryService {
         return stockRepository.findPublicStoreBags(storeId, LocalDate.now(clock), LocalTime.now(clock), normalizeLimit(limit))
                 .stream()
                 .map(this::toSummary)
+                .sorted(Comparator.comparing(PublicBagSummaryResponse::isSoldOut)
+                        .thenComparing(PublicBagSummaryResponse::getPickupStartTime))
                 .toList();
     }
 
     private PublicBagSummaryResponse toSummary(BagDiscoveryProjection row) {
+        var price = pricingService.currentPrice(
+                row.getMinimumValue(),
+                row.getBaseSalePrice(),
+                row.getDynamicMinPrice(),
+                row.getDynamicMaxPrice(),
+                Boolean.TRUE.equals(row.getDynamicPricingEnabled()),
+                row.getStockDate(),
+                row.getPickupEndTime());
+
         return PublicBagSummaryResponse.builder()
                 .bagId(row.getBagId())
                 .storeId(row.getStoreId())
@@ -98,10 +115,17 @@ public class BagDiscoveryService {
                 .name(row.getName())
                 .description(row.getDescription())
                 .bagType(BagType.valueOf(row.getBagType()))
+                .category(StoreCategory.valueOf(row.getCategory()))
+                .bagSize(BagSize.valueOf(row.getBagSize()))
                 .photos(parsePhotos(row.getPhotos()))
-                .estimatedValue(row.getEstimatedValue())
-                .salePrice(row.getSalePrice())
-                .effectivePrice(row.getEffectivePrice())
+                .minimumValue(row.getMinimumValue())
+                .baseSalePrice(row.getBaseSalePrice())
+                .currentSalePrice(price.currentSalePrice())
+                .savingsAmount(price.savingsAmount())
+                .currentDiscountPercent(price.currentDiscountPercent())
+                .dynamicMinPrice(row.getDynamicMinPrice())
+                .dynamicMaxPrice(row.getDynamicMaxPrice())
+                .dynamicPricingEnabled(Boolean.TRUE.equals(row.getDynamicPricingEnabled()))
                 .platformFee(row.getPlatformFee())
                 .maxPerOrder(valueOrZero(row.getMaxPerOrder()))
                 .stockDate(row.getStockDate())
@@ -133,10 +157,17 @@ public class BagDiscoveryService {
                 .name(summary.getName())
                 .description(summary.getDescription())
                 .bagType(summary.getBagType())
+                .category(summary.getCategory())
+                .bagSize(summary.getBagSize())
                 .photos(summary.getPhotos())
-                .estimatedValue(summary.getEstimatedValue())
-                .salePrice(summary.getSalePrice())
-                .effectivePrice(summary.getEffectivePrice())
+                .minimumValue(summary.getMinimumValue())
+                .baseSalePrice(summary.getBaseSalePrice())
+                .currentSalePrice(summary.getCurrentSalePrice())
+                .savingsAmount(summary.getSavingsAmount())
+                .currentDiscountPercent(summary.getCurrentDiscountPercent())
+                .dynamicMinPrice(summary.getDynamicMinPrice())
+                .dynamicMaxPrice(summary.getDynamicMaxPrice())
+                .dynamicPricingEnabled(summary.isDynamicPricingEnabled())
                 .platformFee(summary.getPlatformFee())
                 .maxPerOrder(summary.getMaxPerOrder())
                 .stockDate(summary.getStockDate())
@@ -173,6 +204,21 @@ public class BagDiscoveryService {
 
     private String normalize(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private List<PublicBagSummaryResponse> sortSummaries(List<PublicBagSummaryResponse> values, String sort, int limit) {
+        Comparator<PublicBagSummaryResponse> comparator = Comparator.comparing(PublicBagSummaryResponse::isSoldOut);
+        comparator = switch (sort) {
+            case "distance" -> comparator.thenComparing(
+                    PublicBagSummaryResponse::getDistanceKm,
+                    Comparator.nullsLast(Double::compareTo));
+            case "price" -> comparator.thenComparing(PublicBagSummaryResponse::getCurrentSalePrice);
+            default -> comparator.thenComparing(PublicBagSummaryResponse::getPickupStartTime);
+        };
+        return values.stream()
+                .sorted(comparator.thenComparing(PublicBagSummaryResponse::getPickupStartTime))
+                .limit(limit)
+                .toList();
     }
 
     private List<String> parsePhotos(String value) {

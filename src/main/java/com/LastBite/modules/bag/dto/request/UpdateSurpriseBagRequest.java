@@ -1,11 +1,12 @@
 package com.LastBite.modules.bag.dto.request;
 
 import com.LastBite.modules.bag.enums.BagType;
+import com.LastBite.modules.bag.enums.BagSize;
+import com.LastBite.modules.store.enums.StoreCategory;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Set;
@@ -22,15 +23,13 @@ public class UpdateSurpriseBagRequest {
 
     private BagType bagType;
 
+    private StoreCategory category;
+
+    private BagSize bagSize;
+
     private List<@NotBlank(message = "URL ảnh không được để trống") String> photos;
 
-    @Positive(message = "Giá trị ước tính phải lớn hơn 0")
-    private BigDecimal estimatedValue;
-
-    @Positive(message = "Giá bán phải lớn hơn 0")
-    private BigDecimal salePrice;
-
-    private BigDecimal platformFee;
+    private Boolean dynamicPricingEnabled;
 
     @Min(value = 1, message = "Mỗi đơn phải cho mua ít nhất 1 túi")
     @Max(value = 3, message = "Mỗi khách tối đa 3 túi/ngày/cửa hàng")

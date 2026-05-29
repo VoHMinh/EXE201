@@ -1,7 +1,9 @@
 package com.LastBite.modules.bag.dto.response;
 
 import com.LastBite.modules.bag.enums.BagStatus;
+import com.LastBite.modules.bag.enums.BagSize;
 import com.LastBite.modules.bag.enums.BagType;
+import com.LastBite.modules.store.enums.StoreCategory;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -20,9 +22,17 @@ public class SurpriseBagResponse {
     private String name;
     private String description;
     private BagType bagType;
+    private StoreCategory category;
+    private BagSize bagSize;
     private List<String> photos;
-    private BigDecimal estimatedValue;
-    private BigDecimal salePrice;
+    private BigDecimal minimumValue;
+    private BigDecimal baseSalePrice;
+    private BigDecimal currentSalePrice;
+    private BigDecimal savingsAmount;
+    private int currentDiscountPercent;
+    private BigDecimal dynamicMinPrice;
+    private BigDecimal dynamicMaxPrice;
+    private boolean dynamicPricingEnabled;
     private BigDecimal platformFee;
     private int maxPerOrder;
     private LocalTime pickupStartTime;

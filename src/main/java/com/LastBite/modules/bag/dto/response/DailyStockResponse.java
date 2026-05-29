@@ -4,7 +4,6 @@ import com.LastBite.modules.bag.enums.DailyStockStatus;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -19,7 +18,6 @@ public class DailyStockResponse {
     private int reserved;
     private int sold;
     private int available;
-    private BigDecimal salePriceOverride;
     private DailyStockStatus status;
     private int version;
     private Instant createdAt;

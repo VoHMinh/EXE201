@@ -7,7 +7,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
@@ -46,9 +45,6 @@ public class BagDailyStock extends BaseEntity {
     @Column(nullable = false)
     @Builder.Default
     private int sold = 0;
-
-    @Column(name = "sale_price_override", precision = 10, scale = 0)
-    private BigDecimal salePriceOverride;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)

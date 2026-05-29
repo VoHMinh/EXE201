@@ -1,9 +1,11 @@
 package com.LastBite.modules.bag.entity;
 
 import com.LastBite.common.entity.BaseEntity;
+import com.LastBite.modules.bag.enums.BagSize;
 import com.LastBite.modules.bag.enums.BagStatus;
 import com.LastBite.modules.bag.enums.BagType;
 import com.LastBite.modules.store.entity.Store;
+import com.LastBite.modules.store.enums.StoreCategory;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -41,15 +43,33 @@ public class SurpriseBag extends BaseEntity {
     @Builder.Default
     private BagType bagType = BagType.STANDARD;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50)
+    private StoreCategory category;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "bag_size", nullable = false, length = 30)
+    private BagSize bagSize;
+
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(columnDefinition = "text array")
     private String[] photos;
 
-    @Column(name = "estimated_value", nullable = false, precision = 10, scale = 0)
-    private BigDecimal estimatedValue;
+    @Column(name = "minimum_value", nullable = false, precision = 10, scale = 0)
+    private BigDecimal minimumValue;
 
-    @Column(name = "sale_price", nullable = false, precision = 10, scale = 0)
-    private BigDecimal salePrice;
+    @Column(name = "base_sale_price", nullable = false, precision = 10, scale = 0)
+    private BigDecimal baseSalePrice;
+
+    @Column(name = "dynamic_min_price", nullable = false, precision = 10, scale = 0)
+    private BigDecimal dynamicMinPrice;
+
+    @Column(name = "dynamic_max_price", nullable = false, precision = 10, scale = 0)
+    private BigDecimal dynamicMaxPrice;
+
+    @Column(name = "dynamic_pricing_enabled", nullable = false)
+    @Builder.Default
+    private boolean dynamicPricingEnabled = true;
 
     @Column(name = "platform_fee", nullable = false, precision = 10, scale = 0)
     @Builder.Default

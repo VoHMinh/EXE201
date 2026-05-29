@@ -12,6 +12,7 @@ import com.LastBite.modules.bag.dto.request.UpdateSurpriseBagRequest;
 import com.LastBite.modules.bag.dto.response.DailyStockResponse;
 import com.LastBite.modules.bag.dto.response.StockAuditLogResponse;
 import com.LastBite.modules.bag.dto.response.SurpriseBagResponse;
+import com.LastBite.modules.bag.entity.BagPriceTier;
 import com.LastBite.modules.bag.entity.BagDailyStock;
 import com.LastBite.modules.bag.entity.StockAuditLog;
 import com.LastBite.modules.bag.entity.SurpriseBag;
@@ -19,6 +20,7 @@ import com.LastBite.modules.bag.enums.BagStatus;
 import com.LastBite.modules.bag.enums.DailyStockStatus;
 import com.LastBite.modules.bag.enums.StockAuditAction;
 import com.LastBite.modules.bag.repository.BagDailyStockRepository;
+import com.LastBite.modules.bag.repository.BagPriceTierRepository;
 import com.LastBite.modules.bag.repository.StockAuditLogRepository;
 import com.LastBite.modules.bag.repository.SurpriseBagRepository;
 import com.LastBite.modules.store.entity.Store;
@@ -32,8 +34,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -47,36 +47,40 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SurpriseBagService {
 
-    private static final BigDecimal MIN_SALE_PRICE = BigDecimal.valueOf(15000);
-    private static final BigDecimal MIN_ESTIMATED_RATIO = BigDecimal.valueOf(10);
-    private static final BigDecimal MAX_ESTIMATED_RATIO = BigDecimal.valueOf(50);
     private static final int MAX_STOCK_PER_DAY = 50;
     private static final int MIN_PICKUP_MINUTES = 30;
     private static final int MAX_PICKUP_MINUTES = 240;
 
     private final SurpriseBagRepository bagRepository;
     private final BagDailyStockRepository stockRepository;
+    private final BagPriceTierRepository priceTierRepository;
     private final StockAuditLogRepository auditLogRepository;
     private final StoreRepository storeRepository;
     private final UserRepository userRepository;
+    private final BagPricingService pricingService;
     private final Clock clock;
 
     @Transactional
     @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public SurpriseBagResponse create(UUID ownerId, CreateSurpriseBagRequest request) {
         Store store = getReadyStore(ownerId);
-        validateBagRules(request.getEstimatedValue(), request.getSalePrice(),
-                request.getPickupStartTime(), request.getPickupEndTime());
+        validatePickupWindow(request.getPickupStartTime(), request.getPickupEndTime());
+        BagPriceTier tier = getPriceTier(request.getCategory(), request.getBagSize());
 
         SurpriseBag bag = SurpriseBag.builder()
                 .store(store)
                 .name(request.getName().trim())
                 .description(trimToNull(request.getDescription()))
                 .bagType(request.getBagType() == null ? com.LastBite.modules.bag.enums.BagType.STANDARD : request.getBagType())
+                .category(tier.getCategory())
+                .bagSize(tier.getBagSize())
                 .photos(toStringArray(request.getPhotos()))
-                .estimatedValue(request.getEstimatedValue())
-                .salePrice(request.getSalePrice())
-                .platformFee(request.getPlatformFee() == null ? BigDecimal.valueOf(4000) : request.getPlatformFee())
+                .minimumValue(tier.getMinimumValue())
+                .baseSalePrice(tier.getBaseSalePrice())
+                .dynamicMinPrice(tier.getDynamicMinPrice())
+                .dynamicMaxPrice(tier.getDynamicMaxPrice())
+                .dynamicPricingEnabled(request.getDynamicPricingEnabled() == null || request.getDynamicPricingEnabled())
+                .platformFee(tier.getPlatformFee())
                 .maxPerOrder(request.getMaxPerOrder() == null ? 1 : request.getMaxPerOrder())
                 .pickupStartTime(request.getPickupStartTime())
                 .pickupEndTime(request.getPickupEndTime())
@@ -103,19 +107,20 @@ public class SurpriseBagService {
         SurpriseBag bag = getOwnedBag(ownerId, bagId);
         ensureNotArchived(bag);
 
-        BigDecimal estimatedValue = request.getEstimatedValue() != null ? request.getEstimatedValue() : bag.getEstimatedValue();
-        BigDecimal salePrice = request.getSalePrice() != null ? request.getSalePrice() : bag.getSalePrice();
         var pickupStart = request.getPickupStartTime() != null ? request.getPickupStartTime() : bag.getPickupStartTime();
         var pickupEnd = request.getPickupEndTime() != null ? request.getPickupEndTime() : bag.getPickupEndTime();
-        validateBagRules(estimatedValue, salePrice, pickupStart, pickupEnd);
+        validatePickupWindow(pickupStart, pickupEnd);
 
         if (request.getName() != null && !request.getName().isBlank()) bag.setName(request.getName().trim());
         if (request.getDescription() != null) bag.setDescription(trimToNull(request.getDescription()));
         if (request.getBagType() != null) bag.setBagType(request.getBagType());
+        if (request.getCategory() != null || request.getBagSize() != null) {
+            var category = request.getCategory() != null ? request.getCategory() : bag.getCategory();
+            var bagSize = request.getBagSize() != null ? request.getBagSize() : bag.getBagSize();
+            applyPriceTierSnapshot(bag, getPriceTier(category, bagSize));
+        }
         if (request.getPhotos() != null) bag.setPhotos(toStringArray(request.getPhotos()));
-        if (request.getEstimatedValue() != null) bag.setEstimatedValue(request.getEstimatedValue());
-        if (request.getSalePrice() != null) bag.setSalePrice(request.getSalePrice());
-        if (request.getPlatformFee() != null) bag.setPlatformFee(request.getPlatformFee());
+        if (request.getDynamicPricingEnabled() != null) bag.setDynamicPricingEnabled(request.getDynamicPricingEnabled());
         if (request.getMaxPerOrder() != null) bag.setMaxPerOrder(request.getMaxPerOrder());
         if (request.getPickupStartTime() != null) bag.setPickupStartTime(request.getPickupStartTime());
         if (request.getPickupEndTime() != null) bag.setPickupEndTime(request.getPickupEndTime());
@@ -160,9 +165,6 @@ public class SurpriseBagService {
         ensureNotArchived(bag);
         validateStockDateAllowed(bag, date);
         validateStockQuantity(request.getQuantity(), 0, 0);
-        if (request.getSalePriceOverride() != null) {
-            validateSalePrice(bag.getEstimatedValue(), request.getSalePriceOverride());
-        }
 
         User actor = getUser(ownerId);
         BagDailyStock stock = stockRepository.findByBagIdAndDateForUpdate(bagId, date)
@@ -180,7 +182,6 @@ public class SurpriseBagService {
         }
 
         stock.setQuantity(request.getQuantity());
-        stock.setSalePriceOverride(request.getSalePriceOverride());
         stock.setStatus(resolveStockStatus(stock));
         stock = stockRepository.save(stock);
 
@@ -309,31 +310,13 @@ public class SurpriseBagService {
                 .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
     }
 
-    private void validateBagRules(BigDecimal estimatedValue, BigDecimal salePrice,
-                                  java.time.LocalTime pickupStart, java.time.LocalTime pickupEnd) {
-        validateSalePrice(estimatedValue, salePrice);
-
+    private void validatePickupWindow(java.time.LocalTime pickupStart, java.time.LocalTime pickupEnd) {
         long minutes = Duration.between(pickupStart, pickupEnd).toMinutes();
         if (minutes < MIN_PICKUP_MINUTES) {
             throw new ApiException(ErrorCode.INVALID_INPUT, "Khung giờ pickup tối thiểu 30 phút");
         }
         if (minutes > MAX_PICKUP_MINUTES) {
             throw new ApiException(ErrorCode.INVALID_INPUT, "Khung giờ pickup tối đa 4 tiếng");
-        }
-    }
-
-    private void validateSalePrice(BigDecimal estimatedValue, BigDecimal salePrice) {
-        if (salePrice.compareTo(MIN_SALE_PRICE) < 0) {
-            throw new ApiException(ErrorCode.INVALID_INPUT, "Giá bán tối thiểu là 15,000đ");
-        }
-
-        BigDecimal percent = salePrice.multiply(BigDecimal.valueOf(100))
-                .divide(estimatedValue, 2, RoundingMode.HALF_UP);
-        if (percent.compareTo(MAX_ESTIMATED_RATIO) > 0) {
-            throw new ApiException(ErrorCode.INVALID_INPUT, "Giá bán phải thấp hơn 50% giá trị túi");
-        }
-        if (percent.compareTo(MIN_ESTIMATED_RATIO) < 0) {
-            throw new ApiException(ErrorCode.INVALID_INPUT, "Giá bán không được thấp hơn 10% giá trị túi");
         }
     }
 
@@ -376,6 +359,23 @@ public class SurpriseBagService {
         return stockRepository.findByBagIdAndDate(bagId, LocalDate.now(clock)).orElse(null);
     }
 
+    private BagPriceTier getPriceTier(com.LastBite.modules.store.enums.StoreCategory category,
+                                      com.LastBite.modules.bag.enums.BagSize bagSize) {
+        return priceTierRepository.findByCategoryAndBagSizeAndActiveTrue(category, bagSize)
+                .orElseThrow(() -> new ApiException(ErrorCode.INVALID_INPUT,
+                        "Platform chưa cấu hình gói giá cho danh mục và kích cỡ túi này"));
+    }
+
+    private void applyPriceTierSnapshot(SurpriseBag bag, BagPriceTier tier) {
+        bag.setCategory(tier.getCategory());
+        bag.setBagSize(tier.getBagSize());
+        bag.setMinimumValue(tier.getMinimumValue());
+        bag.setBaseSalePrice(tier.getBaseSalePrice());
+        bag.setDynamicMinPrice(tier.getDynamicMinPrice());
+        bag.setDynamicMaxPrice(tier.getDynamicMaxPrice());
+        bag.setPlatformFee(tier.getPlatformFee());
+    }
+
     private void writeAudit(SurpriseBag bag, BagDailyStock stock, User actor, StockAuditAction action,
                             int delta, int before, int after, String reason) {
         auditLogRepository.save(StockAuditLog.builder()
@@ -391,6 +391,7 @@ public class SurpriseBagService {
     }
 
     private SurpriseBagResponse toBagResponse(SurpriseBag bag, BagDailyStock todayStock) {
+        var price = pricingService.currentPrice(bag, todayStock == null ? LocalDate.now(clock) : todayStock.getDate());
         return SurpriseBagResponse.builder()
                 .id(bag.getId())
                 .storeId(bag.getStore().getId())
@@ -398,9 +399,17 @@ public class SurpriseBagService {
                 .name(bag.getName())
                 .description(bag.getDescription())
                 .bagType(bag.getBagType())
+                .category(bag.getCategory())
+                .bagSize(bag.getBagSize())
                 .photos(bag.getPhotos() == null ? List.of() : Arrays.asList(bag.getPhotos()))
-                .estimatedValue(bag.getEstimatedValue())
-                .salePrice(bag.getSalePrice())
+                .minimumValue(bag.getMinimumValue())
+                .baseSalePrice(bag.getBaseSalePrice())
+                .currentSalePrice(price.currentSalePrice())
+                .savingsAmount(price.savingsAmount())
+                .currentDiscountPercent(price.currentDiscountPercent())
+                .dynamicMinPrice(bag.getDynamicMinPrice())
+                .dynamicMaxPrice(bag.getDynamicMaxPrice())
+                .dynamicPricingEnabled(bag.isDynamicPricingEnabled())
                 .platformFee(bag.getPlatformFee())
                 .maxPerOrder(bag.getMaxPerOrder())
                 .pickupStartTime(bag.getPickupStartTime())
@@ -423,7 +432,6 @@ public class SurpriseBagService {
                 .reserved(stock.getReserved())
                 .sold(stock.getSold())
                 .available(stock.available())
-                .salePriceOverride(stock.getSalePriceOverride())
                 .status(stock.getStatus())
                 .version(stock.getVersion())
                 .createdAt(stock.getCreatedAt())

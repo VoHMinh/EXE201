@@ -1,6 +1,8 @@
 package com.LastBite.modules.bag.dto.response;
 
 import com.LastBite.modules.bag.enums.BagType;
+import com.LastBite.modules.bag.enums.BagSize;
+import com.LastBite.modules.store.enums.StoreCategory;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,10 +32,17 @@ public class PublicBagSummaryResponse implements Serializable {
     private String name;
     private String description;
     private BagType bagType;
+    private StoreCategory category;
+    private BagSize bagSize;
     private List<String> photos;
-    private BigDecimal estimatedValue;
-    private BigDecimal salePrice;
-    private BigDecimal effectivePrice;
+    private BigDecimal minimumValue;
+    private BigDecimal baseSalePrice;
+    private BigDecimal currentSalePrice;
+    private BigDecimal savingsAmount;
+    private int currentDiscountPercent;
+    private BigDecimal dynamicMinPrice;
+    private BigDecimal dynamicMaxPrice;
+    private boolean dynamicPricingEnabled;
     private BigDecimal platformFee;
     private int maxPerOrder;
     private LocalDate stockDate;

@@ -18,10 +18,14 @@ public interface BagDiscoveryProjection {
     String getName();
     String getDescription();
     String getBagType();
+    String getCategory();
+    String getBagSize();
     String getPhotos();
-    BigDecimal getEstimatedValue();
-    BigDecimal getSalePrice();
-    BigDecimal getEffectivePrice();
+    BigDecimal getMinimumValue();
+    BigDecimal getBaseSalePrice();
+    BigDecimal getDynamicMinPrice();
+    BigDecimal getDynamicMaxPrice();
+    Boolean getDynamicPricingEnabled();
     BigDecimal getPlatformFee();
     Integer getMaxPerOrder();
     LocalTime getPickupStartTime();
