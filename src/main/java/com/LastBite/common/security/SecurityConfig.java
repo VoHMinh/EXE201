@@ -95,6 +95,9 @@ public class SecurityConfig {
                         // Xem cửa hàng công khai (chỉ GET)
                         .requestMatchers(HttpMethod.GET, "/api/v1/stores/**").permitAll()
 
+                        // Discovery túi công khai (chỉ GET)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/bags/**").permitAll()
+
                         // Kiểm tra health
                         .requestMatchers("/actuator/health").permitAll()
 

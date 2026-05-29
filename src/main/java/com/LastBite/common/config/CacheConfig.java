@@ -23,6 +23,9 @@ import java.util.Map;
  *   <li>{@code store-detail} — 15 min TTL (includes schedules)</li>
  *   <li>{@code store-by-slug} — 15 min TTL</li>
  *   <li>{@code store-list} — 5 min TTL (search results change often)</li>
+ *   <li>{@code bag-discovery} — 60 sec TTL</li>
+ *   <li>{@code bag-detail} — 60 sec TTL</li>
+ *   <li>{@code store-bags} — 60 sec TTL</li>
  * </ul>
  */
 @Configuration
@@ -45,7 +48,10 @@ public class CacheConfig {
                 "user-addresses", defaults.entryTtl(Duration.ofMinutes(30)),
                 "store-detail", defaults.entryTtl(Duration.ofMinutes(15)),
                 "store-by-slug", defaults.entryTtl(Duration.ofMinutes(15)),
-                "store-list", defaults.entryTtl(Duration.ofMinutes(5))
+                "store-list", defaults.entryTtl(Duration.ofMinutes(5)),
+                "bag-discovery", defaults.entryTtl(Duration.ofSeconds(60)),
+                "bag-detail", defaults.entryTtl(Duration.ofSeconds(60)),
+                "store-bags", defaults.entryTtl(Duration.ofSeconds(60))
         );
 
         return RedisCacheManager.builder(connectionFactory)

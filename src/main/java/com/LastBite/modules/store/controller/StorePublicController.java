@@ -1,6 +1,8 @@
 package com.LastBite.modules.store.controller;
 
 import com.LastBite.common.response.ApiResponse;
+import com.LastBite.modules.bag.dto.response.PublicBagSummaryResponse;
+import com.LastBite.modules.bag.service.BagDiscoveryService;
 import com.LastBite.modules.store.dto.response.PublicStoreDetailResponse;
 import com.LastBite.modules.store.dto.response.StoreResponse;
 import com.LastBite.modules.store.enums.StoreCategory;
@@ -18,6 +20,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/v1/stores")
 @RequiredArgsConstructor
@@ -25,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class StorePublicController {
 
     private final StoreQueryService storeQueryService;
+    private final BagDiscoveryService bagDiscoveryService;
 
     @GetMapping
     @Operation(summary = "Tìm kiếm cửa hàng đang hoạt động và đã xác minh")
@@ -44,5 +50,13 @@ public class StorePublicController {
     @Operation(summary = "Lấy chi tiết cửa hàng công khai theo slug")
     public ResponseEntity<ApiResponse<PublicStoreDetailResponse>> getStoreBySlug(@PathVariable String slug) {
         return ResponseEntity.ok(ApiResponse.ok(storeQueryService.getStoreBySlug(slug)));
+    }
+
+    @GetMapping("/{storeId}/bags")
+    @Operation(summary = "Lấy danh sách túi hôm nay của một cửa hàng")
+    public ResponseEntity<ApiResponse<List<PublicBagSummaryResponse>>> getStoreBags(
+            @PathVariable UUID storeId,
+            @RequestParam(required = false) Integer limit) {
+        return ResponseEntity.ok(ApiResponse.ok(bagDiscoveryService.storeBags(storeId, limit)));
     }
 }

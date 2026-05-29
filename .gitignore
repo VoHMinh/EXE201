@@ -35,3 +35,6 @@ build/
 ### Environment ###
 .env
 !.env.example
+
+### Local database reference ###
+docs/database-reference.local.dbml
